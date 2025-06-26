@@ -1,10 +1,4 @@
--- ✅ Updated Grow a Garden Script - Zeetuan's FIXED Version with Working Buttons
-
-local fruitNames = {
-    "Tomato", "Green Apple", "Avocado", "Sugar Apple",
-    "Prickly Pear", "Loquat", "Cauliflower", "Feijoa",
-    "Bell Pepper", "Kiwi"
-}
+-- ✅ Grow a Garden: Chat Controlled Version by Zeetuan
 
 local player = game.Players.LocalPlayer
 local char = player.Character or player.CharacterAdded:Wait()
@@ -12,107 +6,36 @@ local hrp = char:WaitForChild("HumanoidRootPart")
 local autoCollect = false
 local autoGive = false
 
--- 🛠 Put GUI in PlayerGui instead of CoreGui
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "Z_AutoFarm_GUI"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.Parent = player:WaitForChild("PlayerGui")
+local fruitNames = {
+    "Tomato", "Green Apple", "Avocado", "Sugar Apple",
+    "Prickly Pear", "Loquat", "Cauliflower", "Feijoa",
+    "Bell Pepper", "Kiwi"
+}
 
--- 🔘 Main Toggle Button
-local button = Instance.new("TextButton")
-button.Name = "MainToggle"
-button.Size = UDim2.new(0, 50, 0, 50)
-button.Position = UDim2.new(0, 10, 0, 100)
-button.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-button.Text = "+"
-button.TextColor3 = Color3.new(1, 1, 1)
-button.Font = Enum.Font.GothamBold
-button.TextSize = 28
-button.Parent = ScreenGui
-
--- 🪟 Frame
-local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 230, 0, 170)
-frame.Position = UDim2.new(0, 70, 0, 80)
-frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-frame.BorderSizePixel = 0
-frame.Visible = false
-frame.Parent = ScreenGui
-
--- Title
-local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, 0, 0.2, 0)
-title.Position = UDim2.new(0, 0, 0, 0)
-title.BackgroundTransparency = 1
-title.TextColor3 = Color3.new(1, 1, 1)
-title.Font = Enum.Font.GothamBold
-title.TextSize = 14
-title.Text = "Auto Collect + Auto Give made by Zeetuan"
-title.Parent = frame
-
--- 🔁 Buttons
-local collectToggle = Instance.new("TextButton")
-collectToggle.Size = UDim2.new(1, 0, 0.25, 0)
-collectToggle.Position = UDim2.new(0, 0, 0.2, 0)
-collectToggle.Text = "Auto Collect: OFF"
-collectToggle.TextColor3 = Color3.new(1,1,1)
-collectToggle.BackgroundColor3 = Color3.fromRGB(60, 180, 100)
-collectToggle.Font = Enum.Font.Gotham
-collectToggle.TextSize = 14
-collectToggle.Parent = frame
-
-local giveToggle = Instance.new("TextButton")
-giveToggle.Size = UDim2.new(1, 0, 0.25, 0)
-giveToggle.Position = UDim2.new(0, 0, 0.45, 0)
-giveToggle.Text = "Auto Give: OFF"
-giveToggle.TextColor3 = Color3.new(1,1,1)
-giveToggle.BackgroundColor3 = Color3.fromRGB(100, 160, 255)
-giveToggle.Font = Enum.Font.Gotham
-giveToggle.TextSize = 14
-giveToggle.Parent = frame
-
-local blossomButton = Instance.new("TextButton")
-blossomButton.Size = UDim2.new(1, 0, 0.25, 0)
-blossomButton.Position = UDim2.new(0, 0, 0.70, 0)
-blossomButton.Text = "Buy Candy Blossom"
-blossomButton.TextColor3 = Color3.new(1,1,1)
-blossomButton.BackgroundColor3 = Color3.fromRGB(255, 100, 180)
-blossomButton.Font = Enum.Font.GothamBold
-blossomButton.TextSize = 14
-blossomButton.Parent = frame
-
--- 🧠 Button Logic
-collectToggle.MouseButton1Click:Connect(function()
-	autoCollect = not autoCollect
-	collectToggle.Text = "Auto Collect: " .. (autoCollect and "ON" or "OFF")
-end)
-
-giveToggle.MouseButton1Click:Connect(function()
-	autoGive = not autoGive
-	giveToggle.Text = "Auto Give: " .. (autoGive and "ON" or "OFF")
-end)
-
-button.MouseButton1Click:Connect(function()
-	frame.Visible = not frame.Visible
-	button.Text = frame.Visible and "-" or "+"
-end)
-
-blossomButton.MouseButton1Click:Connect(function()
-	local success, err = pcall(function()
-		local remote = game:GetService("ReplicatedStorage"):FindFirstChild("BuySeed")
-		if remote then
-			remote:FireServer("Candy Blossom", 1)
-			print("[✔] Attempted to buy Candy Blossom.")
-		else
-			warn("[✖] Remote 'BuySeed' not found.")
-		end
-	end)
-	if not success then
-		warn("[Error Buying]:", err)
+-- 💬 CHAT COMMANDS
+player.Chatted:Connect(function(msg)
+	msg = msg:lower()
+	if msg == "!collect" then
+		autoCollect = not autoCollect
+		print("[Auto Collect] is now", autoCollect and "ON" or "OFF")
+	elseif msg == "!give" then
+		autoGive = not autoGive
+		print("[Auto Give] is now", autoGive and "ON" or "OFF")
+	elseif msg == "!buycandy" then
+		local success, err = pcall(function()
+			local remote = game:GetService("ReplicatedStorage"):FindFirstChild("BuySeed")
+			if remote then
+				remote:FireServer("Candy Blossom", 1)
+				print("[✔] Attempted to buy Candy Blossom.")
+			else
+				warn("[✖] Remote 'BuySeed' not found.")
+			end
+		end)
+		if not success then warn("[Buy Error]:", err) end
 	end
 end)
 
--- 🍎 Detect fruit with mutation/weight
+-- 🍎 Check fruit names even with mutation/kg
 local function isTargetFruit(name)
 	for _, keyword in ipairs(fruitNames) do
 		if name:lower():find(keyword:lower()) then
@@ -122,7 +45,7 @@ local function isTargetFruit(name)
 	return false
 end
 
--- 🔄 Collector Loop
+-- 🔄 Loop
 task.spawn(function()
 	while true do
 		task.wait(0.4)
