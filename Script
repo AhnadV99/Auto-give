@@ -1,17 +1,26 @@
--- 🌿 Grow a Garden Auto Collector + Summer Submitter by Zeetuan
--- ✅ Mobile Friendly | Lag-Free | Circular Minimizable UI
+-- ✅ Grow a Garden | Auto Collect + Auto Give (Full Final Script by Zeetuan)
 
--- CONFIG
-local fruitNames = {"tomato", "green apple", "avocado", "sugar apple", "prickly pear", "loquat", "Feijoa", "bell pepper", "kiwi", "cauliflower"}
+-- Fruits allowed in Summer Harvest
+local fruitNames = {
+    "Tomato",
+    "Green Apple",
+    "Avocado",
+    "Sugar Apple",
+    "Prickly Pear",
+    "Loquat",
+    "Cauliflower",
+    "Feijoa",
+    "Bell Pepper",
+    "Kiwi"
+}
 
--- MAIN SETUP
 local player = game.Players.LocalPlayer
 local char = player.Character or player.CharacterAdded:Wait()
 local hrp = char:WaitForChild("HumanoidRootPart")
-local autoCollect = true
-local autoGive = true
+local autoCollect = false
+local autoGive = false
 
--- MINIMIZABLE UI
+-- UI
 local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
 ScreenGui.Name = "Z_AutoFarm_GUI"
 
@@ -20,7 +29,7 @@ button.Name = "MainToggle"
 button.Size = UDim2.new(0, 50, 0, 50)
 button.Position = UDim2.new(0, 10, 0, 100)
 button.BackgroundTransparency = 1
-button.Image = "rbxassetid://3570695787" -- Circular image
+button.Image = "rbxassetid://3570695787"
 button.Parent = ScreenGui
 
 local frame = Instance.new("Frame")
@@ -47,7 +56,6 @@ giveToggle.TextColor3 = Color3.new(1,1,1)
 giveToggle.BackgroundColor3 = Color3.fromRGB(100, 160, 255)
 giveToggle.Parent = frame
 
--- Toggle logic
 collectToggle.MouseButton1Click:Connect(function()
 	autoCollect = not autoCollect
 	collectToggle.Text = "Auto Collect: " .. (autoCollect and "ON" or "OFF")
@@ -62,33 +70,30 @@ button.MouseButton1Click:Connect(function()
 	frame.Visible = not frame.Visible
 end)
 
--- FUNCTIONS
-
+-- Match exactly
 local function isTargetFruit(name)
-	name = name:lower()
 	for _, keyword in ipairs(fruitNames) do
-		if name:find(keyword) then return true end
+		if name == keyword then return true end
 	end
 	return false
 end
 
--- AUTO COLLECT + GIVE LOOP
+-- ProximityPrompt Auto Collect + Give
 task.spawn(function()
 	while true do
 		task.wait(0.4)
 		if not autoCollect and not autoGive then continue end
 
 		for _, obj in pairs(workspace:GetDescendants()) do
-			if obj:IsA("Part") and isTargetFruit(obj.Name) then
-				pcall(function()
-					if autoCollect then
-						firetouchinterest(hrp, obj, 0)
-						firetouchinterest(hrp, obj, 1)
-					end
-					if autoGive and obj:FindFirstChild("ClickDetector") then
-						fireclickdetector(obj.ClickDetector)
-					end
-				end)
+			if obj:IsA("ProximityPrompt") and obj.Parent and obj.Parent:IsA("BasePart") then
+				local fruitName = obj.Parent.Name
+				if isTargetFruit(fruitName) then
+					pcall(function()
+						if autoCollect or autoGive then
+							fireproximityprompt(obj)
+						end
+					end)
+				end
 			end
 		end
 	end
