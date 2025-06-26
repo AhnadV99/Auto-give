@@ -1,18 +1,23 @@
--- ✅ Grow a Garden: Auto Collect + Auto Give (Always ON)
--- 🔥 Made by Zeetuan
+-- ✅ Grow a Garden Auto Script by Zeetuan
+-- 🔁 Auto Collect + Auto Give w/ chat toggles
+-- 🎯 Supports mutation names + random KG
 
 local player = game.Players.LocalPlayer
 local char = player.Character or player.CharacterAdded:Wait()
 local hrp = char:WaitForChild("HumanoidRootPart")
 
--- 🧠 Fruits that work even with mutation/KG name
+-- 🔧 Toggle state
+local autoCollect = false
+local autoGive = false
+
+-- 🧠 Target fruit list
 local fruitNames = {
     "Tomato", "Green Apple", "Avocado", "Sugar Apple",
     "Prickly Pear", "Loquat", "Cauliflower", "Feijoa",
     "Bell Pepper", "Kiwi"
 }
 
--- 🍎 Check if fruit is one of the targets (with mutation/weight in name)
+-- 🔍 Check if fruit name contains a keyword (e.g. "Wet Tomato 2.1kg")
 local function isTargetFruit(name)
 	for _, keyword in ipairs(fruitNames) do
 		if name:lower():find(keyword:lower()) then
@@ -22,20 +27,31 @@ local function isTargetFruit(name)
 	return false
 end
 
--- 🔁 Loop that auto-collects and auto-gives
+-- 💬 Chat toggle commands
+player.Chatted:Connect(function(msg)
+	msg = msg:lower()
+	if msg == "!collect" then
+		autoCollect = not autoCollect
+		warn("[Auto Collect] is now", autoCollect and "ON" or "OFF")
+	elseif msg == "!give" then
+		autoGive = not autoGive
+		warn("[Auto Give] is now", autoGive and "ON" or "OFF")
+	end
+end)
+
+-- 🔁 Main loop (check ClickDetectors)
 task.spawn(function()
 	while true do
 		task.wait(0.3)
 		for _, obj in pairs(workspace:GetDescendants()) do
-			if obj:IsA("ProximityPrompt") and obj.Parent and obj.Parent:IsA("BasePart") then
-				local fruitName = obj.Parent.Name
-				if isTargetFruit(fruitName) then
-					local distance = (hrp.Position - obj.Parent.Position).Magnitude
-					if distance <= obj.MaxActivationDistance + 3 then -- +3 to help mobile range
-						pcall(function()
-							fireproximityprompt(obj)
-						end)
-					end
+			if obj:IsA("Part") and isTargetFruit(obj.Name) then
+				local click = obj:FindFirstChildOfClass("ClickDetector")
+				if click then
+					pcall(function()
+						if autoCollect or autoGive then
+							fireclickdetector(click)
+						end
+					end)
 				end
 			end
 		end
