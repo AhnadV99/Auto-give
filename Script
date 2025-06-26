@@ -1,4 +1,4 @@
--- ✅ Grow a Garden Auto Script by Zeetuan with Candy Blossom button
+-- ✅ Updated Grow a Garden Script - Zeetuan's FIXED Version with Working Buttons
 
 local fruitNames = {
     "Tomato", "Green Apple", "Avocado", "Sugar Apple",
@@ -12,10 +12,13 @@ local hrp = char:WaitForChild("HumanoidRootPart")
 local autoCollect = false
 local autoGive = false
 
--- 🖥 UI Setup
-local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
+-- 🛠 Put GUI in PlayerGui instead of CoreGui
+local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "Z_AutoFarm_GUI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = player:WaitForChild("PlayerGui")
 
+-- 🔘 Main Toggle Button
 local button = Instance.new("TextButton")
 button.Name = "MainToggle"
 button.Size = UDim2.new(0, 50, 0, 50)
@@ -27,6 +30,7 @@ button.Font = Enum.Font.GothamBold
 button.TextSize = 28
 button.Parent = ScreenGui
 
+-- 🪟 Frame
 local frame = Instance.new("Frame")
 frame.Size = UDim2.new(0, 230, 0, 170)
 frame.Position = UDim2.new(0, 70, 0, 80)
@@ -35,6 +39,7 @@ frame.BorderSizePixel = 0
 frame.Visible = false
 frame.Parent = ScreenGui
 
+-- Title
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, 0, 0.2, 0)
 title.Position = UDim2.new(0, 0, 0, 0)
@@ -45,7 +50,7 @@ title.TextSize = 14
 title.Text = "Auto Collect + Auto Give made by Zeetuan"
 title.Parent = frame
 
--- Auto Collect Toggle
+-- 🔁 Buttons
 local collectToggle = Instance.new("TextButton")
 collectToggle.Size = UDim2.new(1, 0, 0.25, 0)
 collectToggle.Position = UDim2.new(0, 0, 0.2, 0)
@@ -56,7 +61,6 @@ collectToggle.Font = Enum.Font.Gotham
 collectToggle.TextSize = 14
 collectToggle.Parent = frame
 
--- Auto Give Toggle
 local giveToggle = Instance.new("TextButton")
 giveToggle.Size = UDim2.new(1, 0, 0.25, 0)
 giveToggle.Position = UDim2.new(0, 0, 0.45, 0)
@@ -67,7 +71,6 @@ giveToggle.Font = Enum.Font.Gotham
 giveToggle.TextSize = 14
 giveToggle.Parent = frame
 
--- 🌸 Candy Blossom Button
 local blossomButton = Instance.new("TextButton")
 blossomButton.Size = UDim2.new(1, 0, 0.25, 0)
 blossomButton.Position = UDim2.new(0, 0, 0.70, 0)
@@ -78,7 +81,7 @@ blossomButton.Font = Enum.Font.GothamBold
 blossomButton.TextSize = 14
 blossomButton.Parent = frame
 
--- Button Toggle Logic
+-- 🧠 Button Logic
 collectToggle.MouseButton1Click:Connect(function()
 	autoCollect = not autoCollect
 	collectToggle.Text = "Auto Collect: " .. (autoCollect and "ON" or "OFF")
@@ -94,7 +97,6 @@ button.MouseButton1Click:Connect(function()
 	button.Text = frame.Visible and "-" or "+"
 end)
 
--- 🍬 Candy Blossom Buy Button Logic
 blossomButton.MouseButton1Click:Connect(function()
 	local success, err = pcall(function()
 		local remote = game:GetService("ReplicatedStorage"):FindFirstChild("BuySeed")
@@ -110,7 +112,7 @@ blossomButton.MouseButton1Click:Connect(function()
 	end
 end)
 
--- 🧠 Detect fruit even with mutation/weight
+-- 🍎 Detect fruit with mutation/weight
 local function isTargetFruit(name)
 	for _, keyword in ipairs(fruitNames) do
 		if name:lower():find(keyword:lower()) then
@@ -120,7 +122,7 @@ local function isTargetFruit(name)
 	return false
 end
 
--- 🔁 Collector Loop
+-- 🔄 Collector Loop
 task.spawn(function()
 	while true do
 		task.wait(0.4)
