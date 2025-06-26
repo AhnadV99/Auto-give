@@ -1,41 +1,18 @@
--- ✅ Grow a Garden: Chat Controlled Version by Zeetuan
+-- ✅ Grow a Garden: Auto Collect + Auto Give (Always ON)
+-- 🔥 Made by Zeetuan
 
 local player = game.Players.LocalPlayer
 local char = player.Character or player.CharacterAdded:Wait()
 local hrp = char:WaitForChild("HumanoidRootPart")
-local autoCollect = false
-local autoGive = false
 
+-- 🧠 Fruits that work even with mutation/KG name
 local fruitNames = {
     "Tomato", "Green Apple", "Avocado", "Sugar Apple",
     "Prickly Pear", "Loquat", "Cauliflower", "Feijoa",
     "Bell Pepper", "Kiwi"
 }
 
--- 💬 CHAT COMMANDS
-player.Chatted:Connect(function(msg)
-	msg = msg:lower()
-	if msg == "!collect" then
-		autoCollect = not autoCollect
-		print("[Auto Collect] is now", autoCollect and "ON" or "OFF")
-	elseif msg == "!give" then
-		autoGive = not autoGive
-		print("[Auto Give] is now", autoGive and "ON" or "OFF")
-	elseif msg == "!buycandy" then
-		local success, err = pcall(function()
-			local remote = game:GetService("ReplicatedStorage"):FindFirstChild("BuySeed")
-			if remote then
-				remote:FireServer("Candy Blossom", 1)
-				print("[✔] Attempted to buy Candy Blossom.")
-			else
-				warn("[✖] Remote 'BuySeed' not found.")
-			end
-		end)
-		if not success then warn("[Buy Error]:", err) end
-	end
-end)
-
--- 🍎 Check fruit names even with mutation/kg
+-- 🍎 Check if fruit is one of the targets (with mutation/weight in name)
 local function isTargetFruit(name)
 	for _, keyword in ipairs(fruitNames) do
 		if name:lower():find(keyword:lower()) then
@@ -45,22 +22,18 @@ local function isTargetFruit(name)
 	return false
 end
 
--- 🔄 Loop
+-- 🔁 Loop that auto-collects and auto-gives
 task.spawn(function()
 	while true do
-		task.wait(0.4)
-		if not autoCollect and not autoGive then continue end
-
+		task.wait(0.3)
 		for _, obj in pairs(workspace:GetDescendants()) do
 			if obj:IsA("ProximityPrompt") and obj.Parent and obj.Parent:IsA("BasePart") then
 				local fruitName = obj.Parent.Name
 				if isTargetFruit(fruitName) then
 					local distance = (hrp.Position - obj.Parent.Position).Magnitude
-					if distance <= obj.MaxActivationDistance then
+					if distance <= obj.MaxActivationDistance + 3 then -- +3 to help mobile range
 						pcall(function()
-							if autoCollect or autoGive then
-								fireproximityprompt(obj)
-							end
+							fireproximityprompt(obj)
 						end)
 					end
 				end
