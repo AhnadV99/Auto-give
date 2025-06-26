@@ -1,5 +1,4 @@
--- ✅ Grow a Garden Script by Zeetuan - Supports Mutations + KG
--- 🧠 UI Toggle + ProximityPrompt Collector (Summer Harvest + all fruit)
+-- ✅ Grow a Garden Auto Script by Zeetuan with Candy Blossom button
 
 local fruitNames = {
     "Tomato", "Green Apple", "Avocado", "Sugar Apple",
@@ -29,7 +28,7 @@ button.TextSize = 28
 button.Parent = ScreenGui
 
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 230, 0, 140)
+frame.Size = UDim2.new(0, 230, 0, 170)
 frame.Position = UDim2.new(0, 70, 0, 80)
 frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 frame.BorderSizePixel = 0
@@ -37,7 +36,7 @@ frame.Visible = false
 frame.Parent = ScreenGui
 
 local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, 0, 0.3, 0)
+title.Size = UDim2.new(1, 0, 0.2, 0)
 title.Position = UDim2.new(0, 0, 0, 0)
 title.BackgroundTransparency = 1
 title.TextColor3 = Color3.new(1, 1, 1)
@@ -46,9 +45,10 @@ title.TextSize = 14
 title.Text = "Auto Collect + Auto Give made by Zeetuan"
 title.Parent = frame
 
+-- Auto Collect Toggle
 local collectToggle = Instance.new("TextButton")
-collectToggle.Size = UDim2.new(1, 0, 0.3, 0)
-collectToggle.Position = UDim2.new(0, 0, 0.3, 0)
+collectToggle.Size = UDim2.new(1, 0, 0.25, 0)
+collectToggle.Position = UDim2.new(0, 0, 0.2, 0)
 collectToggle.Text = "Auto Collect: OFF"
 collectToggle.TextColor3 = Color3.new(1,1,1)
 collectToggle.BackgroundColor3 = Color3.fromRGB(60, 180, 100)
@@ -56,9 +56,10 @@ collectToggle.Font = Enum.Font.Gotham
 collectToggle.TextSize = 14
 collectToggle.Parent = frame
 
+-- Auto Give Toggle
 local giveToggle = Instance.new("TextButton")
-giveToggle.Size = UDim2.new(1, 0, 0.3, 0)
-giveToggle.Position = UDim2.new(0, 0, 0.6, 0)
+giveToggle.Size = UDim2.new(1, 0, 0.25, 0)
+giveToggle.Position = UDim2.new(0, 0, 0.45, 0)
 giveToggle.Text = "Auto Give: OFF"
 giveToggle.TextColor3 = Color3.new(1,1,1)
 giveToggle.BackgroundColor3 = Color3.fromRGB(100, 160, 255)
@@ -66,7 +67,18 @@ giveToggle.Font = Enum.Font.Gotham
 giveToggle.TextSize = 14
 giveToggle.Parent = frame
 
--- Toggle functions
+-- 🌸 Candy Blossom Button
+local blossomButton = Instance.new("TextButton")
+blossomButton.Size = UDim2.new(1, 0, 0.25, 0)
+blossomButton.Position = UDim2.new(0, 0, 0.70, 0)
+blossomButton.Text = "Buy Candy Blossom"
+blossomButton.TextColor3 = Color3.new(1,1,1)
+blossomButton.BackgroundColor3 = Color3.fromRGB(255, 100, 180)
+blossomButton.Font = Enum.Font.GothamBold
+blossomButton.TextSize = 14
+blossomButton.Parent = frame
+
+-- Button Toggle Logic
 collectToggle.MouseButton1Click:Connect(function()
 	autoCollect = not autoCollect
 	collectToggle.Text = "Auto Collect: " .. (autoCollect and "ON" or "OFF")
@@ -82,7 +94,23 @@ button.MouseButton1Click:Connect(function()
 	button.Text = frame.Visible and "-" or "+"
 end)
 
--- 🍅 Check if name matches any fruit
+-- 🍬 Candy Blossom Buy Button Logic
+blossomButton.MouseButton1Click:Connect(function()
+	local success, err = pcall(function()
+		local remote = game:GetService("ReplicatedStorage"):FindFirstChild("BuySeed")
+		if remote then
+			remote:FireServer("Candy Blossom", 1)
+			print("[✔] Attempted to buy Candy Blossom.")
+		else
+			warn("[✖] Remote 'BuySeed' not found.")
+		end
+	end)
+	if not success then
+		warn("[Error Buying]:", err)
+	end
+end)
+
+-- 🧠 Detect fruit even with mutation/weight
 local function isTargetFruit(name)
 	for _, keyword in ipairs(fruitNames) do
 		if name:lower():find(keyword:lower()) then
@@ -92,7 +120,7 @@ local function isTargetFruit(name)
 	return false
 end
 
--- 🔁 Main Auto Collector
+-- 🔁 Collector Loop
 task.spawn(function()
 	while true do
 		task.wait(0.4)
