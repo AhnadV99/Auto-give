@@ -1,17 +1,9 @@
--- ✅ Grow a Garden | Auto Collect + Auto Give (Full Final Script by Zeetuan)
+-- ✅ Grow a Garden | Final Script with UI Title + Maximize Button by Zeetuan
 
--- Fruits allowed in Summer Harvest
 local fruitNames = {
-    "Tomato",
-    "Green Apple",
-    "Avocado",
-    "Sugar Apple",
-    "Prickly Pear",
-    "Loquat",
-    "Cauliflower",
-    "Feijoa",
-    "Bell Pepper",
-    "Kiwi"
+    "Tomato", "Green Apple", "Avocado", "Sugar Apple",
+    "Prickly Pear", "Loquat", "Cauliflower", "Feijoa",
+    "Bell Pepper", "Kiwi"
 }
 
 local player = game.Players.LocalPlayer
@@ -20,42 +12,65 @@ local hrp = char:WaitForChild("HumanoidRootPart")
 local autoCollect = false
 local autoGive = false
 
--- UI
+-- GUI
 local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
 ScreenGui.Name = "Z_AutoFarm_GUI"
 
-local button = Instance.new("ImageButton")
+-- Main toggle button
+local button = Instance.new("TextButton")
 button.Name = "MainToggle"
 button.Size = UDim2.new(0, 50, 0, 50)
 button.Position = UDim2.new(0, 10, 0, 100)
-button.BackgroundTransparency = 1
-button.Image = "rbxassetid://3570695787"
+button.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+button.Text = "+"
+button.TextColor3 = Color3.new(1, 1, 1)
+button.Font = Enum.Font.GothamBold
+button.TextSize = 28
 button.Parent = ScreenGui
 
+-- Main frame
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 160, 0, 100)
-frame.Position = UDim2.new(0, 70, 0, 90)
-frame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+frame.Size = UDim2.new(0, 200, 0, 140)
+frame.Position = UDim2.new(0, 70, 0, 80)
+frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 frame.BorderSizePixel = 0
 frame.Visible = false
 frame.Parent = ScreenGui
 
+-- UI Title
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0.3, 0)
+title.Position = UDim2.new(0, 0, 0, 0)
+title.BackgroundTransparency = 1
+title.TextColor3 = Color3.new(1, 1, 1)
+title.Font = Enum.Font.GothamBold
+title.TextSize = 14
+title.Text = "Auto Collect + Auto Give made by Zeetuan"
+title.Parent = frame
+
+-- Auto Collect toggle
 local collectToggle = Instance.new("TextButton")
-collectToggle.Size = UDim2.new(1, 0, 0.5, 0)
-collectToggle.Position = UDim2.new(0, 0, 0, 0)
-collectToggle.Text = "Auto Collect: ON"
+collectToggle.Size = UDim2.new(1, 0, 0.3, 0)
+collectToggle.Position = UDim2.new(0, 0, 0.3, 0)
+collectToggle.Text = "Auto Collect: OFF"
 collectToggle.TextColor3 = Color3.new(1,1,1)
 collectToggle.BackgroundColor3 = Color3.fromRGB(60, 180, 100)
+collectToggle.Font = Enum.Font.Gotham
+collectToggle.TextSize = 14
 collectToggle.Parent = frame
 
+-- Auto Give toggle
 local giveToggle = Instance.new("TextButton")
-giveToggle.Size = UDim2.new(1, 0, 0.5, 0)
-giveToggle.Position = UDim2.new(0, 0, 0.5, 0)
-giveToggle.Text = "Auto Give: ON"
+giveToggle.Size = UDim2.new(1, 0, 0.3, 0)
+giveToggle.Position = UDim2.new(0, 0, 0.6, 0)
+giveToggle.Text = "Auto Give: OFF"
 giveToggle.TextColor3 = Color3.new(1,1,1)
 giveToggle.BackgroundColor3 = Color3.fromRGB(100, 160, 255)
+giveToggle.Font = Enum.Font.Gotham
+giveToggle.TextSize = 14
 giveToggle.Parent = frame
 
+-- Toggle logic
 collectToggle.MouseButton1Click:Connect(function()
 	autoCollect = not autoCollect
 	collectToggle.Text = "Auto Collect: " .. (autoCollect and "ON" or "OFF")
@@ -68,9 +83,10 @@ end)
 
 button.MouseButton1Click:Connect(function()
 	frame.Visible = not frame.Visible
+	button.Text = frame.Visible and "-" or "+"
 end)
 
--- Match exactly
+-- Fruit check
 local function isTargetFruit(name)
 	for _, keyword in ipairs(fruitNames) do
 		if name == keyword then return true end
@@ -78,7 +94,7 @@ local function isTargetFruit(name)
 	return false
 end
 
--- ProximityPrompt Auto Collect + Give
+-- Collect & Give logic
 task.spawn(function()
 	while true do
 		task.wait(0.4)
@@ -88,11 +104,14 @@ task.spawn(function()
 			if obj:IsA("ProximityPrompt") and obj.Parent and obj.Parent:IsA("BasePart") then
 				local fruitName = obj.Parent.Name
 				if isTargetFruit(fruitName) then
-					pcall(function()
-						if autoCollect or autoGive then
-							fireproximityprompt(obj)
-						end
-					end)
+					local distance = (hrp.Position - obj.Parent.Position).Magnitude
+					if distance < obj.MaxActivationDistance then
+						pcall(function()
+							if autoCollect or autoGive then
+								fireproximityprompt(obj)
+							end
+						end)
+					end
 				end
 			end
 		end
