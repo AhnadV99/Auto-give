@@ -1,36 +1,35 @@
--- LocalScript in StarterGui
-
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
-local ui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
-ui.Name = "PetAgeUI"
+local petFolder = workspace:WaitForChild("Pets") -- Your pet folder in workspace
+local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+gui.Name = "PetAgingGui"
 
--- Create the button
+-- Create Button
 local button = Instance.new("TextButton")
-button.Size = UDim2.new(0, 150, 0, 50)
-button.Position = UDim2.new(1, -160, 0.5, -25) -- Middle right
+button.Size = UDim2.new(0, 160, 0, 50)
+button.Position = UDim2.new(1, -180, 0.5, -25) -- Middle right
+button.AnchorPoint = Vector2.new(0, 0.5)
 button.Text = "Age to 50"
-button.BackgroundColor3 = Color3.fromRGB(100, 200, 255)
-button.TextColor3 = Color3.new(0, 0, 0)
-button.Parent = ui
+button.BackgroundColor3 = Color3.fromRGB(30, 144, 255)
+button.TextScaled = true
+button.Parent = gui
 
--- Create loading label
-local loadingLabel = Instance.new("TextLabel")
-loadingLabel.Size = UDim2.new(0, 150, 0, 30)
-loadingLabel.Position = UDim2.new(1, -160, 0.5, 35)
-loadingLabel.Text = ""
-loadingLabel.TextColor3 = Color3.new(1, 1, 1)
-loadingLabel.BackgroundTransparency = 1
-loadingLabel.Parent = ui
+-- Create Percentage Label
+local percentLabel = Instance.new("TextLabel")
+percentLabel.Size = UDim2.new(0, 160, 0, 40)
+percentLabel.Position = UDim2.new(1, -180, 0.5, 30)
+percentLabel.Text = ""
+percentLabel.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+percentLabel.TextColor3 = Color3.fromRGB(0, 0, 0)
+percentLabel.TextScaled = true
+percentLabel.Parent = gui
 
-local function findHeldPet()
-	local hand = character:FindFirstChild("RightHand") or character:FindFirstChild("Right Arm")
-	if hand then
-		for _, child in ipairs(hand:GetChildren()) do
-			if child:IsA("Model") or child:IsA("Accessory") then
-				if child:FindFirstChild("Age") and child.Age:IsA("NumberValue") then
-					return child
+local function getHeldPet()
+	for _, pet in pairs(petFolder:GetChildren()) do
+		if pet:IsA("Model") and pet:FindFirstChild("Owner") then
+			if pet.Owner.Value == player and pet:FindFirstChild("HumanoidRootPart") then
+				if pet.HumanoidRootPart:FindFirstChild("Held") and pet.HumanoidRootPart.Held.Value == true then
+					return pet
 				end
 			end
 		end
@@ -38,49 +37,38 @@ local function findHeldPet()
 	return nil
 end
 
-local isAging = false
+local running = false
 
 button.MouseButton1Click:Connect(function()
-	if isAging then return end
-
-	local pet = findHeldPet()
+	if running then return end
+	local pet = getHeldPet()
 	if not pet then
-		loadingLabel.Text = "No pet held"
-		wait(2)
-		loadingLabel.Text = ""
+		percentLabel.Text = "No pet held"
 		return
 	end
 
-	local ageVal = pet:FindFirstChild("Age")
-	if not ageVal then
-		loadingLabel.Text = "Pet missing 'Age'"
-		wait(2)
-		loadingLabel.Text = ""
+	local ageValue = pet:FindFirstChild("Age")
+	if not ageValue or not ageValue:IsA("NumberValue") then
+		percentLabel.Text = "Missing 'Age'"
 		return
 	end
 
-	isAging = true
-	local startAge = ageVal.Value
-	local goalAge = 50
-	local steps = (goalAge - startAge)
-	if steps <= 0 then
-		loadingLabel.Text = "Already at 50"
-		wait(2)
-		loadingLabel.Text = ""
-		isAging = false
-		return
-	end
+	running = true
+	local totalTime = 300 -- 5 minutes
+	local steps = 50
+	local delayPerStep = totalTime / steps
 
-	local waitTime = 300 / steps  -- 5 minutes to 50
 	for i = 1, steps do
-		ageVal.Value = ageVal.Value + 1
-		local percent = math.floor((i / steps) * 100)
-		loadingLabel.Text = "Aging... " .. percent .. "%"
-		wait(waitTime)
+		if not running then break end
+		task.wait(delayPerStep)
+
+		if ageValue.Value < 50 then
+			ageValue.Value += 1
+		end
+		local percentage = math.floor((i / steps) * 100)
+		percentLabel.Text = percentage .. "%"
 	end
 
-	loadingLabel.Text = "Done! Age: " .. ageVal.Value
-	wait(2)
-	loadingLabel.Text = ""
-	isAging = false
+	percentLabel.Text = "Done!"
+	running = false
 end)
