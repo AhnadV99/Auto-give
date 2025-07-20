@@ -1,41 +1,51 @@
--- Place this LocalScript inside StarterPlayerScripts
-
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
 local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
+local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+gui.Name = "PetAgeGui"
+gui.ResetOnSpawn = false
 
--- UI Setup
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "PetGui"
-screenGui.Parent = player:WaitForChild("PlayerGui")
-
+-- UI Button
 local button = Instance.new("TextButton")
-button.Size = UDim2.new(0, 150, 0, 50)
-button.Position = UDim2.new(1, -160, 0.5, -25) -- middle right
-button.AnchorPoint = Vector2.new(0, 0)
-button.Text = "Age to 50"
-button.BackgroundColor3 = Color3.fromRGB(255, 170, 0)
-button.TextScaled = true
-button.Parent = screenGui
+button.Size = UDim2.new(0, 120, 0, 40)
+button.Position = UDim2.new(1, -140, 0.5, -20) -- middle right side
+button.AnchorPoint = Vector2.new(0, 0.5)
+button.Text = "Age +1"
+button.BackgroundColor3 = Color3.fromRGB(30, 144, 255)
+button.TextColor3 = Color3.new(1, 1, 1)
+button.Font = Enum.Font.GothamBold
+button.TextSize = 18
+button.Parent = gui
 
-local progressLabel = Instance.new("TextLabel")
-progressLabel.Size = UDim2.new(0, 150, 0, 30)
-progressLabel.Position = UDim2.new(1, -160, 0.5, 30)
-progressLabel.AnchorPoint = Vector2.new(0, 0)
-progressLabel.Text = ""
-progressLabel.TextColor3 = Color3.new(1, 1, 1)
-progressLabel.BackgroundTransparency = 1
-progressLabel.TextScaled = true
-progressLabel.Parent = screenGui
+-- Progress bar
+local progressBarBG = Instance.new("Frame")
+progressBarBG.Size = UDim2.new(0, 120, 0, 10)
+progressBarBG.Position = UDim2.new(1, -140, 0.5, 30)
+progressBarBG.AnchorPoint = Vector2.new(0, 0.5)
+progressBarBG.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+progressBarBG.Parent = gui
 
-local isAging = false
+local progressBar = Instance.new("Frame")
+progressBar.Size = UDim2.new(0, 0, 1, 0)
+progressBar.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+progressBar.Parent = progressBarBG
 
-local function getHeldPetTool()
-	for _, item in ipairs(player.Backpack:GetChildren()) do
-		if item:IsA("Tool") and item:FindFirstChild("Age") then
-			return item
-		end
-	end
+-- Error message
+local errorText = Instance.new("TextLabel")
+errorText.Size = UDim2.new(0, 300, 0, 25)
+errorText.Position = UDim2.new(0.5, -150, 0.6, 0)
+errorText.AnchorPoint = Vector2.new(0.5, 0)
+errorText.TextColor3 = Color3.fromRGB(255, 0, 0)
+errorText.Text = ""
+errorText.BackgroundTransparency = 1
+errorText.Font = Enum.Font.Gotham
+errorText.TextScaled = true
+errorText.Visible = false
+errorText.Parent = gui
+
+local function findHeldPet()
 	for _, item in ipairs(character:GetChildren()) do
 		if item:IsA("Tool") and item:FindFirstChild("Age") then
 			return item
@@ -44,43 +54,41 @@ local function getHeldPetTool()
 	return nil
 end
 
+local function showError(text)
+	errorText.Text = text
+	errorText.Visible = true
+	wait(2)
+	errorText.Visible = false
+end
+
+local isBusy = false
+
 button.MouseButton1Click:Connect(function()
-	if isAging then return end
-	
-	local petTool = getHeldPetTool()
-	if not petTool then
-		progressLabel.Text = "❌ No pet held"
+	if isBusy then return end
+
+	local pet = findHeldPet()
+	if not pet then
+		showError("❌ No pet held! Hold a pet tool.")
 		return
 	end
 
-	local ageValue = petTool:FindFirstChild("Age")
-	if not ageValue or not ageValue:IsA("NumberValue") then
-		progressLabel.Text = "❌ No Age data"
+	local ageValue = pet:FindFirstChild("Age")
+	if not ageValue or not ageValue:IsA("IntValue") then
+		showError("❌ Pet has no 'Age' IntValue!")
 		return
 	end
 
-	isAging = true
-	local startAge = ageValue.Value
-	local targetAge = 50
-	local totalTime = 300 -- 5 minutes in seconds
-	local interval = 1 -- seconds per step
-	local steps = math.floor(totalTime / interval)
-	local agePerStep = (targetAge - startAge) / steps
+	isBusy = true
+	local duration = 5
+	local startTime = tick()
 
-	for i = 1, steps do
-		if ageValue.Value < targetAge then
-			ageValue.Value = ageValue.Value + agePerStep
-			local percent = math.floor(((ageValue.Value - startAge) / (targetAge - startAge)) * 100)
-			progressLabel.Text = "⏳ Aging: " .. percent .. "%"
-		else
-			break
-		end
-		wait(interval)
+	while tick() - startTime < duration do
+		local percent = math.clamp((tick() - startTime) / duration, 0, 1)
+		progressBar.Size = UDim2.new(percent, 0, 1, 0)
+		RunService.RenderStepped:Wait()
 	end
 
-	ageValue.Value = targetAge
-	progressLabel.Text = "✅ Aged to 50!"
-	wait(3)
-	progressLabel.Text = ""
-	isAging = false
+	ageValue.Value += 1
+	progressBar.Size = UDim2.new(0, 0, 1, 0)
+	isBusy = false
 end)
