@@ -1,136 +1,103 @@
--- 🧠 LocalScript (place this inside StarterGui)
+--// Pet Auto Age & ESP (Grow a Garden v1566) by Zeetuan
 
--- SERVICES
+-- Services
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
+local CoreGui = game:GetService("CoreGui")
+local StarterGui = game:GetService("StarterGui")
 
--- PLAYER
 local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 
--- GUI SETUP
-local screenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+-- GUI Setup
+local screenGui = Instance.new("ScreenGui", CoreGui)
 screenGui.Name = "PetAgeGUI"
-screenGui.ResetOnSpawn = false
 
--- BUTTON
-local ageButton = Instance.new("TextButton")
-ageButton.Parent = screenGui
-ageButton.Size = UDim2.new(0, 140, 0, 50)
-ageButton.Position = UDim2.new(1, -160, 0.5, -25) -- Right-middle
-ageButton.AnchorPoint = Vector2.new(0.5, 0.5)
-ageButton.Text = "🕒 Age Pet"
-ageButton.TextScaled = true
-ageButton.BackgroundColor3 = Color3.fromRGB(60, 200, 80)
-ageButton.TextColor3 = Color3.new(1,1,1)
-ageButton.BorderSizePixel = 0
-ageButton.ZIndex = 10
-ageButton.Visible = true
+local btn = Instance.new("TextButton", screenGui)
+btn.Size = UDim2.new(0, 140, 0, 50)
+btn.Position = UDim2.new(1, -160, 0.5, -25) -- Middle-right
+btn.AnchorPoint = Vector2.new(0.5, 0.5)
+btn.Text = "Age My Pet"
+btn.BackgroundColor3 = Color3.fromRGB(34, 34, 34)
+btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+btn.Font = Enum.Font.GothamBold
+btn.TextSize = 18
+btn.BorderSizePixel = 0
+btn.BackgroundTransparency = 0.2
 
--- STATUS LABEL
-local statusLabel = Instance.new("TextLabel")
-statusLabel.Parent = screenGui
-statusLabel.Size = UDim2.new(0, 250, 0, 40)
-statusLabel.Position = UDim2.new(1, -160, 0.5, 35)
-statusLabel.AnchorPoint = Vector2.new(0.5, 0)
-statusLabel.Text = "Waiting..."
-statusLabel.TextScaled = true
-statusLabel.BackgroundTransparency = 1
-statusLabel.TextColor3 = Color3.new(1,1,1)
+-- ESP Drawing
+local billboard = Instance.new("BillboardGui")
+billboard.Size = UDim2.new(0, 200, 0, 50)
+billboard.StudsOffset = Vector3.new(0, 3, 0)
+billboard.AlwaysOnTop = true
 
--- FIND PET FUNCTION
+local label = Instance.new("TextLabel", billboard)
+label.Size = UDim2.new(1, 0, 1, 0)
+label.BackgroundTransparency = 1
+label.TextColor3 = Color3.fromRGB(255, 255, 255)
+label.TextStrokeTransparency = 0.5
+label.Font = Enum.Font.Gotham
+label.TextScaled = true
+label.Text = "No pet held"
+
+-- Functions
 local function getHeldPet()
-    local backpack = player:FindFirstChild("Backpack")
-    local char = player.Character
-    local pet = nil
-
-    if char then
-        for _, obj in ipairs(char:GetChildren()) do
-            if obj:IsA("Model") and obj:FindFirstChild("NameTag") and obj:FindFirstChild("Age") then
-                return obj
-            end
+    local backpack = player.Backpack
+    for _, item in pairs(backpack:GetChildren()) do
+        if item:IsA("Tool") and item:FindFirstChild("PetData") then
+            return item
         end
     end
-
-    if backpack then
-        for _, obj in ipairs(backpack:GetChildren()) do
-            if obj:IsA("Tool") and obj:FindFirstChild("Handle") then
-                return obj
-            end
-        end
+    -- Also check equipped pet (held in hand)
+    local tool = character:FindFirstChildOfClass("Tool")
+    if tool and tool:FindFirstChild("PetData") then
+        return tool
     end
-
-    return pet
+    return nil
 end
 
--- AGE LOOP
-local aging = false
-local function startAging()
-    if aging then return end
-    aging = true
+local function updateESP()
+    local petTool = getHeldPet()
+    if petTool then
+        local data = petTool:FindFirstChild("PetData")
+        local name = data:FindFirstChild("PetName") and data.PetName.Value or "Unknown"
+        local weight = data:FindFirstChild("Weight") and data.Weight.Value or "?"
+        local age = data:FindFirstChild("Age") and data.Age.Value or "?"
 
-    while aging do
-        local pet = getHeldPet()
-        if pet then
-            local ageValue = pet:FindFirstChild("Age")
-            if ageValue and ageValue:IsA("NumberValue") then
-                ageValue.Value = ageValue.Value + 1
-                statusLabel.Text = pet.Name .. " [Age: " .. ageValue.Value .. "] ✅"
-            else
-                statusLabel.Text = "⚠️ Pet found but no age property."
-            end
-        else
-            statusLabel.Text = "❌ No pet held!"
+        label.Text = string.format("%s\n[%.2f kg]\n[Age %s]", name, tonumber(weight), age)
+        if not billboard.Parent or billboard.Parent ~= petTool.Handle then
+            billboard.Parent = petTool:FindFirstChild("Handle") or petTool
         end
-        wait(1)
-    end
-end
-
--- STOP AGING (optional if needed)
-local function stopAging()
-    aging = false
-    statusLabel.Text = "⏹️ Stopped aging."
-end
-
--- BUTTON CLICK
-ageButton.MouseButton1Click:Connect(function()
-    if not aging then
-        statusLabel.Text = "⏳ Aging started..."
-        startAging()
     else
-        stopAging()
+        label.Text = "No pet held"
+        billboard.Parent = nil
     end
-end)
-
--- ESP (Optional Visual Aid)
-local function showESP(pet)
-    local billboard = pet:FindFirstChild("ESP") or Instance.new("BillboardGui", pet)
-    billboard.Name = "ESP"
-    billboard.Size = UDim2.new(0, 100, 0, 50)
-    billboard.AlwaysOnTop = true
-    billboard.StudsOffset = Vector3.new(0, 3, 0)
-
-    local label = billboard:FindFirstChild("Text") or Instance.new("TextLabel", billboard)
-    label.Name = "Text"
-    label.Size = UDim2.new(1, 0, 1, 0)
-    label.BackgroundTransparency = 1
-    label.TextScaled = true
-    label.TextColor3 = Color3.new(1,1,0)
-
-    RunService.RenderStepped:Connect(function()
-        if pet and pet:FindFirstChild("Age") then
-            label.Text = pet.Name .. "\nAge: " .. pet.Age.Value
-        else
-            label.Text = "No Age Info"
-        end
-    end)
 end
 
--- Show ESP on Pet
-RunService.Heartbeat:Connect(function()
-    local heldPet = getHeldPet()
-    if heldPet and not heldPet:FindFirstChild("ESP") then
-        showESP(heldPet)
+local function increaseAge()
+    local petTool = getHeldPet()
+    if petTool then
+        local ageVal = petTool:FindFirstChild("PetData"):FindFirstChild("Age")
+        if ageVal and ageVal:IsA("NumberValue") then
+            ageVal.Value = ageVal.Value + 1
+            updateESP()
+        end
     end
+end
+
+-- Bind button
+btn.MouseButton1Click:Connect(function()
+    increaseAge()
 end)
+
+-- Constant update
+RunService.RenderStepped:Connect(function()
+    updateESP()
+end)
+
+-- Notifications
+StarterGui:SetCore("SendNotification", {
+    Title = "Pet Aging Loaded 🐾",
+    Text = "Touch the button to age your pet. Holding not needed!",
+    Duration = 5
+})
