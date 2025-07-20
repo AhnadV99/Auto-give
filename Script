@@ -1,93 +1,86 @@
+-- LocalScript in StarterGui
+
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
-local petHolder = player:WaitForChild("Backpack")
-local UIS = game:GetService("UserInputService")
-local runService = game:GetService("RunService")
+local character = player.Character or player.CharacterAdded:Wait()
+local ui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+ui.Name = "PetAgeUI"
 
--- UI Setup
-local screenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
-screenGui.Name = "PetAgeGUI"
-
+-- Create the button
 local button = Instance.new("TextButton")
-button.Parent = screenGui
+button.Size = UDim2.new(0, 150, 0, 50)
+button.Position = UDim2.new(1, -160, 0.5, -25) -- Middle right
 button.Text = "Age to 50"
-button.Size = UDim2.new(0, 120, 0, 40)
-button.Position = UDim2.new(1, -130, 0.5, -20) -- middle right
-button.AnchorPoint = Vector2.new(0, 0)
-button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-button.TextColor3 = Color3.fromRGB(255, 255, 255)
-button.Font = Enum.Font.SourceSansBold
-button.TextSize = 16
+button.BackgroundColor3 = Color3.fromRGB(100, 200, 255)
+button.TextColor3 = Color3.new(0, 0, 0)
+button.Parent = ui
 
-local percentLabel = Instance.new("TextLabel")
-percentLabel.Parent = screenGui
-percentLabel.Size = UDim2.new(0, 120, 0, 20)
-percentLabel.Position = UDim2.new(1, -130, 0.5, 30)
-percentLabel.Text = ""
-percentLabel.BackgroundTransparency = 1
-percentLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-percentLabel.Font = Enum.Font.SourceSans
-percentLabel.TextSize = 14
+-- Create loading label
+local loadingLabel = Instance.new("TextLabel")
+loadingLabel.Size = UDim2.new(0, 150, 0, 30)
+loadingLabel.Position = UDim2.new(1, -160, 0.5, 35)
+loadingLabel.Text = ""
+loadingLabel.TextColor3 = Color3.new(1, 1, 1)
+loadingLabel.BackgroundTransparency = 1
+loadingLabel.Parent = ui
 
--- Helper function to get held pet
-local function getHeldPet()
-	for _, tool in ipairs(player.Character:GetChildren()) do
-		if tool:IsA("Tool") and tool:FindFirstChild("Handle") and tool:FindFirstChild("Age") then
-			return tool
+local function findHeldPet()
+	local hand = character:FindFirstChild("RightHand") or character:FindFirstChild("Right Arm")
+	if hand then
+		for _, child in ipairs(hand:GetChildren()) do
+			if child:IsA("Model") or child:IsA("Accessory") then
+				if child:FindFirstChild("Age") and child.Age:IsA("NumberValue") then
+					return child
+				end
+			end
 		end
 	end
 	return nil
 end
 
--- Button Click
 local isAging = false
+
 button.MouseButton1Click:Connect(function()
 	if isAging then return end
-	
-	local pet = getHeldPet()
+
+	local pet = findHeldPet()
 	if not pet then
-		percentLabel.Text = "No pet held!"
+		loadingLabel.Text = "No pet held"
 		wait(2)
-		percentLabel.Text = ""
+		loadingLabel.Text = ""
 		return
 	end
-	
-	local ageValue = pet:FindFirstChild("Age")
-	if not ageValue or not ageValue:IsA("NumberValue") then
-		percentLabel.Text = "No age value found!"
+
+	local ageVal = pet:FindFirstChild("Age")
+	if not ageVal then
+		loadingLabel.Text = "Pet missing 'Age'"
 		wait(2)
-		percentLabel.Text = ""
-		return
-	end
-	
-	local currentAge = ageValue.Value
-	if currentAge >= 50 then
-		percentLabel.Text = "Already age 50+"
-		wait(2)
-		percentLabel.Text = ""
+		loadingLabel.Text = ""
 		return
 	end
 
 	isAging = true
-	button.Text = "Aging..."
-	
-	local startAge = ageValue.Value
-	local endAge = 50
-	local totalToAdd = endAge - startAge
-	local totalTime = 300 -- 5 minutes in seconds
-	local timePerAge = totalTime / totalToAdd
-	
-	for i = 1, totalToAdd do
-		if not isAging then break end
-		ageValue.Value = ageValue.Value + 1
-		local progress = ((ageValue.Value - startAge) / totalToAdd) * 100
-		percentLabel.Text = string.format("%.0f%%", progress)
-		wait(timePerAge)
+	local startAge = ageVal.Value
+	local goalAge = 50
+	local steps = (goalAge - startAge)
+	if steps <= 0 then
+		loadingLabel.Text = "Already at 50"
+		wait(2)
+		loadingLabel.Text = ""
+		isAging = false
+		return
 	end
-	
-	button.Text = "Age to 50"
-	percentLabel.Text = "100%"
+
+	local waitTime = 300 / steps  -- 5 minutes to 50
+	for i = 1, steps do
+		ageVal.Value = ageVal.Value + 1
+		local percent = math.floor((i / steps) * 100)
+		loadingLabel.Text = "Aging... " .. percent .. "%"
+		wait(waitTime)
+	end
+
+	loadingLabel.Text = "Done! Age: " .. ageVal.Value
 	wait(2)
-	percentLabel.Text = ""
+	loadingLabel.Text = ""
 	isAging = false
 end)
