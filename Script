@@ -2,15 +2,15 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
 local player = Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
-local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+local gui = Instance.new("ScreenGui")
 gui.Name = "PetAgeGui"
 gui.ResetOnSpawn = false
+gui.Parent = player:WaitForChild("PlayerGui")
 
 -- UI Button
 local button = Instance.new("TextButton")
 button.Size = UDim2.new(0, 120, 0, 40)
-button.Position = UDim2.new(1, -140, 0.5, -20) -- middle right side
+button.Position = UDim2.new(1, -140, 0.5, -20) -- middle right
 button.AnchorPoint = Vector2.new(0, 0.5)
 button.Text = "Age +1"
 button.BackgroundColor3 = Color3.fromRGB(30, 144, 255)
@@ -30,6 +30,7 @@ progressBarBG.Parent = gui
 local progressBar = Instance.new("Frame")
 progressBar.Size = UDim2.new(0, 0, 1, 0)
 progressBar.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+progressBar.BorderSizePixel = 0
 progressBar.Parent = progressBarBG
 
 -- Error message
@@ -45,15 +46,18 @@ errorText.TextScaled = true
 errorText.Visible = false
 errorText.Parent = gui
 
+-- Function to find held pet with "Age"
 local function findHeldPet()
-	for _, item in ipairs(character:GetChildren()) do
-		if item:IsA("Tool") and item:FindFirstChild("Age") then
-			return item
+	local character = player.Character or player.CharacterAdded:Wait()
+	for _, tool in ipairs(character:GetChildren()) do
+		if tool:IsA("Tool") and tool:FindFirstChild("Age") and tool.Age:IsA("IntValue") then
+			return tool
 		end
 	end
 	return nil
 end
 
+-- Error display
 local function showError(text)
 	errorText.Text = text
 	errorText.Visible = true
@@ -61,6 +65,7 @@ local function showError(text)
 	errorText.Visible = false
 end
 
+-- Aging logic
 local isBusy = false
 
 button.MouseButton1Click:Connect(function()
@@ -68,18 +73,21 @@ button.MouseButton1Click:Connect(function()
 
 	local pet = findHeldPet()
 	if not pet then
-		showError("❌ No pet held! Hold a pet tool.")
+		showError("❌ No pet held!")
 		return
 	end
 
 	local ageValue = pet:FindFirstChild("Age")
 	if not ageValue or not ageValue:IsA("IntValue") then
-		showError("❌ Pet has no 'Age' IntValue!")
+		showError("❌ 'Age' IntValue not found in pet!")
 		return
 	end
 
 	isBusy = true
-	local duration = 5
+	button.Text = "Processing..."
+	button.AutoButtonColor = false
+
+	local duration = 5 -- seconds to simulate
 	local startTime = tick()
 
 	while tick() - startTime < duration do
@@ -89,6 +97,9 @@ button.MouseButton1Click:Connect(function()
 	end
 
 	ageValue.Value += 1
+
+	button.Text = "Age +1"
 	progressBar.Size = UDim2.new(0, 0, 1, 0)
+	button.AutoButtonColor = true
 	isBusy = false
 end)
