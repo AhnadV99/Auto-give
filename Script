@@ -1,97 +1,102 @@
--- Place this LocalScript inside StarterPlayerScripts or StarterGui
+-- Services
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 
-local player = game.Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
+-- GUI elements (adjust these to your actual GUI hierarchy)
+local screenGui = script.Parent
+local ageButton = screenGui:WaitForChild("AgeTo50Button") -- Button named "AgeTo50Button"
+local progressText = screenGui:WaitForChild("ProgressText") -- TextLabel to show percent, e.g. "Loading: 0%"
 
--- Create ScreenGui
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "PetAgeGui"
-screenGui.Parent = player:WaitForChild("PlayerGui")
-
--- Create the button
-local button = Instance.new("TextButton")
-button.Size = UDim2.new(0, 200, 0, 50)
-button.Position = UDim2.new(0.5, -100, 0.8, 0)
-button.Text = "Age to 50"
-button.Parent = screenGui
-button.Font = Enum.Font.SourceSansBold
-button.TextSize = 24
-button.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
-button.TextColor3 = Color3.new(1, 1, 1)
-
--- Create loading text
-local loadingText = Instance.new("TextLabel")
-loadingText.Size = UDim2.new(0, 200, 0, 30)
-loadingText.Position = UDim2.new(0.5, -100, 0.88, 0)
-loadingText.Text = ""
-loadingText.Parent = screenGui
-loadingText.Font = Enum.Font.SourceSans
-loadingText.TextSize = 18
-loadingText.BackgroundTransparency = 1
-loadingText.TextColor3 = Color3.new(1, 1, 1)
-
--- Function to find held pet
+-- Function to get the pet player is currently holding
 local function getHeldPet()
-    -- Check all Tools in character (usually held items are Tools)
-    for _, tool in pairs(character:GetChildren()) do
-        if tool:IsA("Tool") then
-            -- Assuming the Tool is a pet, return it
-            return tool
-        end
+    -- Replace this with your actual method to get the held pet instance
+    -- Example: player.Character.HeldPet or player.PlayerGui.HeldPet, etc.
+    local player = game.Players.LocalPlayer
+    local character = player.Character
+    if not character then return nil end
+
+    -- Example: Assume pet is a child named "HeldPet" in the character
+    local pet = character:FindFirstChild("HeldPet")
+    return pet
+end
+
+-- Function to safely get pet's Age NumberValue
+local function getPetAgeValue(pet)
+    if not pet then return nil end
+    local ageValue = pet:FindFirstChild("Age")
+    if ageValue and ageValue:IsA("NumberValue") then
+        return ageValue
     end
     return nil
 end
 
--- Function to set pet age
-local function setPetAge(pet, age)
-    -- Assuming pet has a NumberValue named "Age" or a similar property
-    local ageValue = pet:FindFirstChild("Age")
-    if ageValue and ageValue:IsA("NumberValue") then
-        ageValue.Value = age
-    else
-        -- Or try setting an Attribute if used
-        if pet:GetAttribute("Age") ~= nil then
-            pet:SetAttribute("Age", age)
-        else
-            -- If nothing found, just print warning
-            warn("Pet has no 'Age' NumberValue or attribute.")
-        end
-    end
-end
+-- Constants
+local TARGET_AGE = 50
+local DURATION_SECONDS = 5 * 60 -- 5 minutes
 
--- When button clicked
-button.MouseButton1Click:Connect(function()
+-- Variables
+local holdingButton = false
+local elapsedTime = 0
+
+-- Main function to handle age increasing over time while button is held
+local function onButtonPressed()
     local pet = getHeldPet()
     if not pet then
-        loadingText.Text = "No pet held!"
+        progressText.Text = "No held pet detected."
         return
     end
-    
-    loadingText.Text = "Aging pet..."
-    button.Active = false
-    button.AutoButtonColor = false
-    button.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
 
-    local totalTime = 300 -- 5 minutes in seconds
-    local elapsed = 0
-    local increment = 1 -- update every 1 second
-
-    -- Update loop for loading percent
-    while elapsed < totalTime do
-        wait(increment)
-        elapsed = elapsed + increment
-        local percent = math.floor((elapsed / totalTime) * 100)
-        loadingText.Text = "Loading: " .. percent .. "%"
+    local ageValue = getPetAgeValue(pet)
+    if not ageValue then
+        progressText.Text = "Pet has no Age value."
+        return
     end
 
-    -- After loading, set age to 50
-    setPetAge(pet, 50)
-    loadingText.Text = "Pet aged to 50!"
+    if ageValue.Value >= TARGET_AGE then
+        progressText.Text = "Pet is already age 50 or older."
+        return
+    end
 
-    -- Reset button
-    wait(3)
-    loadingText.Text = ""
-    button.Active = true
-    button.AutoButtonColor = true
-    button.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
-end)
+    holdingButton = true
+    elapsedTime = 0
+    progressText.Text = "Loading: 0%"
+
+    -- Use RunService.Heartbeat for smooth update
+    local connection
+    connection = RunService.Heartbeat:Connect(function(deltaTime)
+        if not holdingButton then
+            connection:Disconnect()
+            return
+        end
+
+        elapsedTime = elapsedTime + deltaTime
+        local progress = math.clamp(elapsedTime / DURATION_SECONDS, 0, 1)
+        progressText.Text = string.format("Loading: %d%%", math.floor(progress * 100))
+
+        -- Calculate new age based on progress
+        local startAge = ageValue.Value
+        local newAge = math.floor(startAge + (TARGET_AGE - startAge) * progress)
+        if newAge > ageValue.Value then
+            ageValue.Value = newAge
+        end
+
+        if progress >= 1 then
+            holdingButton = false
+            progressText.Text = "Done! Pet is now age 50."
+            connection:Disconnect()
+        end
+    end)
+end
+
+local function onButtonReleased()
+    holdingButton = false
+    progressText.Text = "Loading stopped."
+end
+
+-- Connect button events
+ageButton.MouseButton1Down:Connect(onButtonPressed)
+ageButton.MouseButton1Up:Connect(onButtonReleased)
+ageButton.MouseLeave:Connect(onButtonReleased)
+
+-- Optional: reset progress text on script start
+progressText.Text = ""
