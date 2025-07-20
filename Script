@@ -1,51 +1,52 @@
+-- GUI references
 local button = script.Parent:WaitForChild("HoldButton")
 local ageLabel = script.Parent:WaitForChild("AgeLabel")
 local loadingFrame = script.Parent:WaitForChild("LoadingFrame")
 local percentText = loadingFrame:WaitForChild("Percent")
 
+-- Variables
 local holding = false
 local maxAge = 50
+local currentAge = 0
+local waitTimePerAge = 6 -- 300 sec / 50 ages = 6 sec per age
 
--- Get current age from text (e.g., "Age: 12")
-local function getAge()
-	local number = tonumber(ageLabel.Text:match("%d+"))
-	return number or 3
-end
+-- Initial UI setup
+loadingFrame.Visible = false
+ageLabel.Text = "" -- No starting age shown
 
--- Update age visually
+-- Function to update age text
 local function setAge(newAge)
 	ageLabel.Text = "Age: " .. newAge
 end
 
--- Age up logic
+-- Function to simulate aging while holding button
 local function ageUp()
-	while holding do
-		local currentAge = getAge()
-		if currentAge < maxAge then
-			currentAge += 1
-			setAge(currentAge)
-		else
-			break
-		end
-		wait(0.1) -- speed of aging (hold duration)
+	while holding and currentAge < maxAge do
+		currentAge += 1
+		setAge(currentAge)
+		wait(waitTimePerAge)
 	end
 
-	if getAge() >= maxAge then
-		-- Show loading screen after age 50
+	-- Once pet reaches age 50, show loading
+	if currentAge >= maxAge then
 		loadingFrame.Visible = true
-		for i = 0, 100, 1 do
+		for i = 0, 100 do
 			percentText.Text = i .. "%"
 			wait(0.03)
 		end
+		percentText.Text = "Done 100% ✅"
 	end
 end
 
--- Button press detection
+-- Button press starts holding
 button.MouseButton1Down:Connect(function()
-	holding = true
-	ageUp()
+	if not holding and currentAge < maxAge then
+		holding = true
+		ageUp()
+	end
 end)
 
+-- Button release stops holding
 button.MouseButton1Up:Connect(function()
 	holding = false
 end)
