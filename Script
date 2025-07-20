@@ -1,101 +1,86 @@
-local player = game.Players.LocalPlayer
-local mouse = player:GetMouse()
+-- Place this LocalScript inside StarterPlayerScripts
 
--- GUI Setup
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+
+-- UI Setup
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "PetAgeGui"
+screenGui.Name = "PetGui"
 screenGui.Parent = player:WaitForChild("PlayerGui")
 
 local button = Instance.new("TextButton")
-button.Name = "AgeTo50Button"
-button.Size = UDim2.new(0, 160, 0, 50)
-button.Position = UDim2.new(1, -180, 0.5, -25)
-button.AnchorPoint = Vector2.new(1, 0.5)
-button.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
-button.TextColor3 = Color3.new(1, 1, 1)
-button.Font = Enum.Font.SourceSansBold
-button.TextSize = 22
+button.Size = UDim2.new(0, 150, 0, 50)
+button.Position = UDim2.new(1, -160, 0.5, -25) -- middle right
+button.AnchorPoint = Vector2.new(0, 0)
 button.Text = "Age to 50"
+button.BackgroundColor3 = Color3.fromRGB(255, 170, 0)
+button.TextScaled = true
 button.Parent = screenGui
 
-local loadingText = Instance.new("TextLabel")
-loadingText.Name = "LoadingText"
-loadingText.Size = UDim2.new(0, 160, 0, 30)
-loadingText.Position = UDim2.new(1, -180, 0.5, -65)
-loadingText.AnchorPoint = Vector2.new(1, 0.5)
-loadingText.BackgroundTransparency = 0.3
-loadingText.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-loadingText.TextColor3 = Color3.new(1, 1, 1)
-loadingText.Font = Enum.Font.SourceSansBold
-loadingText.TextSize = 18
-loadingText.Text = ""
-loadingText.Visible = false
-loadingText.Parent = screenGui
+local progressLabel = Instance.new("TextLabel")
+progressLabel.Size = UDim2.new(0, 150, 0, 30)
+progressLabel.Position = UDim2.new(1, -160, 0.5, 30)
+progressLabel.AnchorPoint = Vector2.new(0, 0)
+progressLabel.Text = ""
+progressLabel.TextColor3 = Color3.new(1, 1, 1)
+progressLabel.BackgroundTransparency = 1
+progressLabel.TextScaled = true
+progressLabel.Parent = screenGui
 
--- Helper: Get currently held pet
-local function getHeldPet()
-    for _, obj in pairs(workspace:GetDescendants()) do
-        if obj:IsA("Model") and obj:FindFirstChild("Age") and obj:FindFirstChild("Owner") then
-            local owner = obj:FindFirstChild("Owner")
-            if owner:IsA("ObjectValue") and owner.Value == player then
-                if obj:FindFirstChild("Held") and obj.Held:IsA("BoolValue") and obj.Held.Value == true then
-                    return obj
-                end
-            end
-        end
-    end
-    return nil
+local isAging = false
+
+local function getHeldPetTool()
+	for _, item in ipairs(player.Backpack:GetChildren()) do
+		if item:IsA("Tool") and item:FindFirstChild("Age") then
+			return item
+		end
+	end
+	for _, item in ipairs(character:GetChildren()) do
+		if item:IsA("Tool") and item:FindFirstChild("Age") then
+			return item
+		end
+	end
+	return nil
 end
 
--- Age simulation
-local function simulateAging(pet)
-    local ageValue = pet:FindFirstChild("Age")
-    if not ageValue or not ageValue:IsA("NumberValue") then return end
+button.MouseButton1Click:Connect(function()
+	if isAging then return end
+	
+	local petTool = getHeldPetTool()
+	if not petTool then
+		progressLabel.Text = "❌ No pet held"
+		return
+	end
 
-    local startAge = ageValue.Value
-    local targetAge = 50
-    local totalSteps = targetAge - startAge
-    if totalSteps <= 0 then return end
+	local ageValue = petTool:FindFirstChild("Age")
+	if not ageValue or not ageValue:IsA("NumberValue") then
+		progressLabel.Text = "❌ No Age data"
+		return
+	end
 
-    local totalTime = 300 -- 5 minutes
-    local timePerStep = totalTime / totalSteps
+	isAging = true
+	local startAge = ageValue.Value
+	local targetAge = 50
+	local totalTime = 300 -- 5 minutes in seconds
+	local interval = 1 -- seconds per step
+	local steps = math.floor(totalTime / interval)
+	local agePerStep = (targetAge - startAge) / steps
 
-    for i = 1, totalSteps do
-        task.wait(timePerStep)
-        ageValue.Value = ageValue.Value + 1
-        local progress = math.floor(((i) / totalSteps) * 100)
-        loadingText.Text = "Loading: " .. progress .. "%"
-    end
-end
+	for i = 1, steps do
+		if ageValue.Value < targetAge then
+			ageValue.Value = ageValue.Value + agePerStep
+			local percent = math.floor(((ageValue.Value - startAge) / (targetAge - startAge)) * 100)
+			progressLabel.Text = "⏳ Aging: " .. percent .. "%"
+		else
+			break
+		end
+		wait(interval)
+	end
 
--- Button press handling
-local holding = false
-local holdStart = 0
-
-button.MouseButton1Down:Connect(function()
-    if holding then return end
-    holding = true
-    holdStart = tick()
-    loadingText.Visible = true
-    loadingText.Text = "Loading: 0%"
-
-    local pet = getHeldPet()
-    if not pet then
-        loadingText.Text = "No held pet found"
-        task.wait(2)
-        loadingText.Visible = false
-        holding = false
-        return
-    end
-
-    simulateAging(pet)
-
-    loadingText.Text = "Done!"
-    task.wait(1)
-    loadingText.Visible = false
-    holding = false
-end)
-
-button.MouseButton1Up:Connect(function()
-    holding = false
+	ageValue.Value = targetAge
+	progressLabel.Text = "✅ Aged to 50!"
+	wait(3)
+	progressLabel.Text = ""
+	isAging = false
 end)
