@@ -1,8 +1,9 @@
-local UserInputService = game:GetService("UserInputService")
+local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
+local player = Players.LocalPlayer
 local screenGui = Instance.new("ScreenGui")
-screenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+screenGui.Parent = player:WaitForChild("PlayerGui")
 screenGui.Name = "PetAgeGui"
 
 local button = Instance.new("TextButton")
@@ -40,31 +41,88 @@ local totalHoldTime = 300 -- 5 minutes
 local holdTime = 0
 local holding = false
 
--- When button pressed down
+-- This function should get your currently held pet instance
+-- Replace this with your actual method to get the pet
+local function getHeldPet()
+    -- Example: pet is child of character named "Pet"
+    local character = player.Character
+    if character then
+        local pet = character:FindFirstChild("Pet")
+        if pet then return pet end
+    end
+    return nil
+end
+
+local function updatePetAgeLabel(pet)
+    if pet then
+        local ageValue = pet:FindFirstChild("Age")
+        if ageValue and ageValue:IsA("IntValue") then
+            petAgeLabel.Text = "Pet Age: "..ageValue.Value
+            return
+        end
+    end
+    petAgeLabel.Text = "Pet Age: (unknown)"
+end
+
 button.MouseButton1Down:Connect(function()
     if holding then return end
+    local pet = getHeldPet()
+    if not pet then
+        petAgeLabel.Text = "No pet held!"
+        return
+    end
+
     holding = true
     holdTime = 0
+
+    -- Update the pet age label initially
+    updatePetAgeLabel(pet)
 end)
 
--- When button released
 button.MouseButton1Up:Connect(function()
     holding = false
     holdTime = 0
     loadingBarFill.Size = UDim2.new(0, 0, 1, 0)
     percentLabel.Text = "0%"
+    -- update pet age label in case something changed
+    local pet = getHeldPet()
+    updatePetAgeLabel(pet)
 end)
 
--- Update loading bar every frame while holding
 RunService.RenderStepped:Connect(function(dt)
     if holding then
+        local pet = getHeldPet()
+        if not pet then
+            holding = false
+            petAgeLabel.Text = "No pet held!"
+            loadingBarFill.Size = UDim2.new(0, 0, 1, 0)
+            percentLabel.Text = "0%"
+            return
+        end
+
         holdTime = holdTime + dt
         local percent = math.clamp(holdTime / totalHoldTime, 0, 1)
         loadingBarFill.Size = UDim2.new(percent, 0, 1, 0)
         percentLabel.Text = math.floor(percent * 100).."%"
+
         if percent >= 1 then
+            -- Set pet age to 50
+            local ageValue = pet:FindFirstChild("Age")
+            if ageValue and ageValue:IsA("IntValue") then
+                ageValue.Value = 50
+            else
+                -- If no Age IntValue, create one
+                local newAge = Instance.new("IntValue")
+                newAge.Name = "Age"
+                newAge.Value = 50
+                newAge.Parent = pet
+            end
+
             petAgeLabel.Text = "Pet Age: 50"
             holding = false
+        else
+            -- Update label to current age (if changes externally)
+            updatePetAgeLabel(pet)
         end
     end
 end)
