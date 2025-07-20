@@ -1,18 +1,16 @@
 local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 
--- Create ScreenGui
 local screenGui = Instance.new("ScreenGui")
 screenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
 screenGui.Name = "PetAgeGui"
 
--- Create Button
 local button = Instance.new("TextButton")
 button.Size = UDim2.new(0, 200, 0, 50)
 button.Position = UDim2.new(0.5, -100, 0.5, -25)
 button.Text = "Age to 50"
 button.Parent = screenGui
 
--- Create Loading Bar Background
 local loadingBarBG = Instance.new("Frame")
 loadingBarBG.Size = UDim2.new(0, 200, 0, 20)
 loadingBarBG.Position = UDim2.new(0.5, -100, 0.5, 35)
@@ -20,13 +18,11 @@ loadingBarBG.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 loadingBarBG.BorderSizePixel = 1
 loadingBarBG.Parent = screenGui
 
--- Create Loading Bar Fill
 local loadingBarFill = Instance.new("Frame")
-loadingBarFill.Size = UDim2.new(0, 0, 1, 0) -- starts empty
+loadingBarFill.Size = UDim2.new(0, 0, 1, 0)
 loadingBarFill.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
 loadingBarFill.Parent = loadingBarBG
 
--- Create Percentage Label
 local percentLabel = Instance.new("TextLabel")
 percentLabel.Size = UDim2.new(1, 0, 1, 0)
 percentLabel.BackgroundTransparency = 1
@@ -34,42 +30,41 @@ percentLabel.Text = "0%"
 percentLabel.TextColor3 = Color3.new(1,1,1)
 percentLabel.Parent = loadingBarBG
 
--- Create Pet Age Label
 local petAgeLabel = Instance.new("TextLabel")
 petAgeLabel.Size = UDim2.new(0, 200, 0, 50)
 petAgeLabel.Position = UDim2.new(0.5, -100, 0.5, 70)
 petAgeLabel.Text = "Pet Age: (unknown)"
 petAgeLabel.Parent = screenGui
 
-local loading = false
+local totalHoldTime = 300 -- 5 minutes
 local holdTime = 0
-local totalHoldTime = 300 -- 5 minutes = 300 seconds
+local holding = false
 
+-- When button pressed down
 button.MouseButton1Down:Connect(function()
-    if loading then return end
-    loading = true
+    if holding then return end
+    holding = true
+    holdTime = 0
+end)
+
+-- When button released
+button.MouseButton1Up:Connect(function()
+    holding = false
     holdTime = 0
     loadingBarFill.Size = UDim2.new(0, 0, 1, 0)
     percentLabel.Text = "0%"
-    
-    -- Start counting hold time
-    while loading and holdTime < totalHoldTime do
-        wait(0.1)
-        holdTime = holdTime + 0.1
+end)
+
+-- Update loading bar every frame while holding
+RunService.RenderStepped:Connect(function(dt)
+    if holding then
+        holdTime = holdTime + dt
         local percent = math.clamp(holdTime / totalHoldTime, 0, 1)
         loadingBarFill.Size = UDim2.new(percent, 0, 1, 0)
         percentLabel.Text = math.floor(percent * 100).."%"
+        if percent >= 1 then
+            petAgeLabel.Text = "Pet Age: 50"
+            holding = false
+        end
     end
-    
-    if loading then
-        petAgeLabel.Text = "Pet Age: 50"
-    end
-    
-    loading = false
-end)
-
-button.MouseButton1Up:Connect(function()
-    loading = false
-    loadingBarFill.Size = UDim2.new(0, 0, 1, 0)
-    percentLabel.Text = "0%"
 end)
