@@ -1,93 +1,117 @@
+-- LocalScript inside a ScreenGui
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
-local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
-gui.ResetOnSpawn = false
+local RunService = game:GetService("RunService")
 
--- Create UI button
-local ageButton = Instance.new("TextButton")
-ageButton.Size = UDim2.new(0, 120, 0, 40)
-ageButton.Position = UDim2.new(1, -150, 0.5, -20) -- Middle right
-ageButton.AnchorPoint = Vector2.new(0, 0)
-ageButton.Text = "Age to 50"
-ageButton.BackgroundColor3 = Color3.fromRGB(70, 130, 180)
-ageButton.TextColor3 = Color3.new(1, 1, 1)
-ageButton.Parent = gui
+-- UI Setup
+local gui = script.Parent
 
--- Progress Bar Frame
-local progressFrame = Instance.new("Frame")
-progressFrame.Size = UDim2.new(0, 300, 0, 30)
-progressFrame.Position = UDim2.new(0.5, -150, 0.7, 0)
-progressFrame.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
-progressFrame.Visible = false
-progressFrame.Parent = gui
+local button = Instance.new("TextButton")
+button.Size = UDim2.new(0, 120, 0, 40)
+button.Position = UDim2.new(1, -140, 0.5, -20)
+button.AnchorPoint = Vector2.new(0, 0.5)
+button.Text = "Age to 50"
+button.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+button.TextColor3 = Color3.new(1,1,1)
+button.Parent = gui
 
--- Fill inside progress bar
-local fill = Instance.new("Frame")
-fill.Size = UDim2.new(0, 0, 1, 0)
-fill.BackgroundColor3 = Color3.fromRGB(50, 205, 50)
-fill.Parent = progressFrame
+local progressBar = Instance.new("Frame")
+progressBar.Size = UDim2.new(0, 0, 0, 10)
+progressBar.Position = UDim2.new(0.5, -100, 0.5, 30)
+progressBar.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+progressBar.BorderSizePixel = 0
+progressBar.Visible = false
+progressBar.Parent = gui
 
--- Percentage label
-local percentLabel = Instance.new("TextLabel")
-percentLabel.Size = UDim2.new(1, 0, 1, 0)
-percentLabel.BackgroundTransparency = 1
-percentLabel.TextColor3 = Color3.new(0, 0, 0)
-percentLabel.TextScaled = true
-percentLabel.Text = "0%"
-percentLabel.Parent = progressFrame
+local percentageLabel = Instance.new("TextLabel")
+percentageLabel.Size = UDim2.new(0, 80, 0, 20)
+percentageLabel.Position = UDim2.new(0.5, -40, 0.5, 45)
+percentageLabel.BackgroundTransparency = 1
+percentageLabel.TextColor3 = Color3.new(1, 1, 1)
+percentageLabel.Text = "0%"
+percentageLabel.Visible = false
+percentageLabel.Parent = gui
 
--- Simulated pet holding check
+-- Find held pet function
 local function getHeldPet()
-    local char = player.Character
-    if not char then return nil end
-    for _, tool in pairs(char:GetChildren()) do
-        if tool:IsA("Tool") and tool:FindFirstChild("Age") then
-            return tool
-        end
-    end
-    return nil
+	for _, tool in pairs(player.Character:GetChildren()) do
+		if tool:IsA("Tool") and tool:FindFirstChild("Handle") then
+			return tool
+		end
+	end
+	return nil
 end
 
--- Handle button click
-local isAging = false
-ageButton.MouseButton1Down:Connect(function()
-    if isAging then return end
+-- Update Age visually
+local function updatePetAgeText(pet, newAge)
+	for _, v in pairs(pet:GetChildren()) do
+		if v:IsA("BillboardGui") then
+			for _, label in pairs(v:GetDescendants()) do
+				if label:IsA("TextLabel") and label.Text:find("Age") then
+					label.Text = "[Age " .. tostring(newAge) .. "]"
+				end
+			end
+		end
+	end
+end
 
-    local heldPet = getHeldPet()
-    if not heldPet then
-        warn("No pet held!")
-        return
-    end
+-- Main button click logic
+local isRunning = false
 
-    local ageValue = heldPet:FindFirstChild("Age")
-    if not ageValue or not ageValue:IsA("NumberValue") then
-        warn("Pet has no Age NumberValue.")
-        return
-    end
+button.MouseButton1Click:Connect(function()
+	if isRunning then return end
 
-    if ageValue.Value >= 50 then
-        warn("Already age 50 or above.")
-        return
-    end
+	local pet = getHeldPet()
+	if not pet then
+		warn("No pet held.")
+		return
+	end
 
-    -- Start visual aging
-    isAging = true
-    progressFrame.Visible = true
-    local duration = 300 -- 5 minutes
-    local startAge = ageValue.Value
-    local targetAge = 50
+	local currentAge = 0
 
-    for i = 1, duration do
-        if not isAging then break end
-        task.wait(1)
-        local percent = i / duration
-        fill.Size = UDim2.new(percent, 0, 1, 0)
-        percentLabel.Text = string.format("%.0f%%", percent * 100)
-        -- Visual aging logic
-        ageValue.Value = math.floor(startAge + (targetAge - startAge) * percent)
-    end
+	-- Try to find current age visually
+	for _, gui in pairs(pet:GetDescendants()) do
+		if gui:IsA("TextLabel") and gui.Text:find("Age") then
+			local found = gui.Text:match("Age (%d+)")
+			if found then
+				currentAge = tonumber(found)
+			end
+		end
+	end
 
-    ageValue.Value = targetAge
-    percentLabel.Text = "100%"
-    isAging = false
+	if currentAge >= 50 then
+		warn("Already at age 50 or more.")
+		return
+	end
+
+	isRunning = true
+	button.Text = "Aging..."
+	progressBar.Visible = true
+	percentageLabel.Visible = true
+
+	local duration = 300 -- 5 minutes in seconds
+	local targetAge = 50
+	local startAge = currentAge
+	local startTime = tick()
+
+	local heartbeatConn
+	heartbeatConn = RunService.Heartbeat:Connect(function()
+		local elapsed = tick() - startTime
+		local progress = math.clamp(elapsed / duration, 0, 1)
+		local displayAge = math.floor(startAge + (targetAge - startAge) * progress)
+		local percent = math.floor(progress * 100)
+
+		progressBar.Size = UDim2.new(progress, 0, 0, 10)
+		percentageLabel.Text = percent .. "%"
+
+		updatePetAgeText(pet, displayAge)
+
+		if progress >= 1 then
+			heartbeatConn:Disconnect()
+			button.Text = "Age to 50"
+			progressBar.Visible = false
+			percentageLabel.Visible = false
+			isRunning = false
+		end
+	end)
 end)
