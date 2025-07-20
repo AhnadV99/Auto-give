@@ -1,113 +1,108 @@
+-- Put this LocalScript inside a ScreenGui
+
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
+local gui = script.Parent
 
--- UI Setup
-local screenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
-screenGui.Name = "PetAgerUI"
-
+-- Create the button
 local ageButton = Instance.new("TextButton")
-ageButton.Parent = screenGui
+ageButton.Name = "AgeButton"
 ageButton.Size = UDim2.new(0, 150, 0, 50)
-ageButton.Position = UDim2.new(1, -170, 0.5, -25) -- middle right side
+ageButton.Position = UDim2.new(1, -160, 0.5, -25) -- middle right side
+ageButton.AnchorPoint = Vector2.new(0, 0)
 ageButton.Text = "Age to 50"
-ageButton.BackgroundColor3 = Color3.fromRGB(50, 150, 250)
+ageButton.BackgroundColor3 = Color3.fromRGB(30, 144, 255)
 ageButton.TextColor3 = Color3.new(1, 1, 1)
-ageButton.Visible = false
-ageButton.AutoButtonColor = false
+ageButton.Font = Enum.Font.GothamBold
+ageButton.TextSize = 20
+ageButton.Parent = gui
 
-local progressBar = Instance.new("Frame", screenGui)
-progressBar.Size = UDim2.new(0, 150, 0, 10)
-progressBar.Position = UDim2.new(1, -170, 0.5, 30)
-progressBar.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
-progressBar.Visible = false
+-- Create loading UI
+local loadingFrame = Instance.new("Frame")
+loadingFrame.Size = UDim2.new(1, 0, 1, 0)
+loadingFrame.BackgroundTransparency = 0.4
+loadingFrame.BackgroundColor3 = Color3.new(0, 0, 0)
+loadingFrame.Visible = false
+loadingFrame.ZIndex = 10
+loadingFrame.Parent = gui
 
-local fill = Instance.new("Frame", progressBar)
-fill.Size = UDim2.new(0, 0, 1, 0)
-fill.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+local loadingText = Instance.new("TextLabel")
+loadingText.Size = UDim2.new(1, 0, 1, 0)
+loadingText.Text = "Loading... 0%"
+loadingText.TextColor3 = Color3.new(1, 1, 1)
+loadingText.Font = Enum.Font.SourceSansBold
+loadingText.TextScaled = true
+loadingText.BackgroundTransparency = 1
+loadingText.Parent = loadingFrame
 
-local percentText = Instance.new("TextLabel", screenGui)
-percentText.Size = UDim2.new(0, 150, 0, 20)
-percentText.Position = UDim2.new(1, -170, 0.5, 45)
-percentText.BackgroundTransparency = 1
-percentText.TextColor3 = Color3.new(1, 1, 1)
-percentText.Text = "0%"
-percentText.Visible = false
+-- Hold detection and timer
+local holdConnection
+local holding = false
+local duration = 300 -- 5 minutes
+local interval = duration / 17 -- adds age every ~17.6s from age 33 to 50
+local visualAge = nil
 
--- Utility to find held pet
 local function getHeldPet()
-	for _, child in ipairs(player.Character and player.Character:GetChildren() or {}) do
-		if child:IsA("Tool") and child:FindFirstChild("Handle") then
-			return child
+	for _, tool in ipairs(player.Character:GetChildren()) do
+		if tool:IsA("Tool") and tool:FindFirstChild("Handle") then
+			return tool
 		end
 	end
 	return nil
 end
 
--- Main Loop to Check for Held Pet
-task.spawn(function()
-	while true do
-		local pet = getHeldPet()
-		if pet then
-			ageButton.Visible = true
-		else
-			ageButton.Visible = false
-		end
-		task.wait(1)
-	end
-end)
-
--- Age Logic
-local holding = false
-ageButton.MouseButton1Down:Connect(function()
+local function simulateAging()
 	local pet = getHeldPet()
-	if not pet then return end
-	
-	local ageValue = 0
+	if not pet then
+		warn("No pet held!")
+		return
+	end
+
+	local petName = pet.Name
+	local age = 0
+
+	-- Try to extract visual age if readable
 	for _, v in ipairs(pet:GetChildren()) do
-		if v:IsA("StringValue") and v.Name:lower():find("age") then
-			local num = tonumber(string.match(v.Value, "%d+"))
-			if num then ageValue = num end
-			break
-		elseif v:IsA("IntValue") and v.Name:lower():find("age") then
-			ageValue = v.Value
-			break
+		if v:IsA("StringValue") and v.Name == "Age" then
+			age = tonumber(v.Value) or 0
 		end
 	end
-	
-	-- Setup visuals
+
+	if age >= 50 then
+		return
+	end
+
+	visualAge = age
+	loadingFrame.Visible = true
+	local percent = 0
+	local steps = 50 - visualAge
+	local tickInterval = duration / steps
+
+	for i = 1, steps do
+		if not holding then break end
+		wait(tickInterval)
+		visualAge += 1
+		percent = math.floor((visualAge / 50) * 100)
+		loadingText.Text = "Aging " .. petName .. ": " .. percent .. "% [Age: " .. visualAge .. "]"
+	end
+
+	loadingText.Text = "Done! Age: 50"
+	wait(1)
+	loadingFrame.Visible = false
+end
+
+ageButton.MouseButton1Down:Connect(function()
+	if holding then return end
+	local pet = getHeldPet()
+	if not pet then
+		loadingText.Text = "No pet held!"
+		loadingFrame.Visible = true
+		wait(2)
+		loadingFrame.Visible = false
+		return
+	end
 	holding = true
-	progressBar.Visible = true
-	percentText.Visible = true
-	fill.Size = UDim2.new(0, 0, 1, 0)
-	percentText.Text = "0%"
-	
-	local duration = 300 -- 5 minutes
-	local startTime = tick()
-	local targetAge = 50
-	
-	while holding and tick() - startTime <= duration do
-		local progress = (tick() - startTime) / duration
-		fill.Size = UDim2.new(progress, 0, 1, 0)
-		percentText.Text = string.format("%d%%", math.floor(progress * 100))
-		
-		-- Fake age visually increasing
-		local currentAge = math.floor(ageValue + (targetAge - ageValue) * progress)
-		pet.Name = string.gsub(pet.Name, "%[Age .-%]", "") -- remove old age
-		pet.Name = pet.Name .. string.format(" [Age %d]", currentAge)
-		
-		task.wait(0.1)
-	end
-	
-	if holding then
-		-- Ensure 100%
-		fill.Size = UDim2.new(1, 0, 1, 0)
-		percentText.Text = "100%"
-		pet.Name = string.gsub(pet.Name, "%[Age .-%]", "")
-		pet.Name = pet.Name .. " [Age 50]"
-	end
-	
-	progressBar.Visible = false
-	percentText.Visible = false
+	simulateAging()
 end)
 
 ageButton.MouseButton1Up:Connect(function()
