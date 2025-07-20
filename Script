@@ -1,68 +1,75 @@
-local Players = game:GetService("Players")
-local player = Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
+local UserInputService = game:GetService("UserInputService")
 
--- GUI elements
-local gui = script.Parent
-local button = gui:FindFirstChild("HoldButton")
-local ageLabel = gui:FindFirstChild("AgeLabel")
-local loadingFrame = gui:FindFirstChild("LoadingFrame")
-local percentText = loadingFrame and loadingFrame:FindFirstChild("Percent")
+-- Create ScreenGui
+local screenGui = Instance.new("ScreenGui")
+screenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+screenGui.Name = "PetAgeGui"
 
--- Settings
-local holding = false
-local maxAge = 50
-local currentAge = 0
-local waitTimePerAge = 6 -- 5 minutes total = 50 * 6 seconds
+-- Create Button
+local button = Instance.new("TextButton")
+button.Size = UDim2.new(0, 200, 0, 50)
+button.Position = UDim2.new(0.5, -100, 0.5, -25)
+button.Text = "Age to 50"
+button.Parent = screenGui
 
--- UI Setup
-loadingFrame.Visible = false
-ageLabel.Text = ""
+-- Create Loading Bar Background
+local loadingBarBG = Instance.new("Frame")
+loadingBarBG.Size = UDim2.new(0, 200, 0, 20)
+loadingBarBG.Position = UDim2.new(0.5, -100, 0.5, 35)
+loadingBarBG.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+loadingBarBG.BorderSizePixel = 1
+loadingBarBG.Parent = screenGui
 
-local function getHeldPet()
-	local pet = character:FindFirstChild("Pet") -- change if needed
-	if pet and pet:FindFirstChild("Holding") and pet.Holding.Value == true then
-		return pet
-	end
-	return nil
-end
+-- Create Loading Bar Fill
+local loadingBarFill = Instance.new("Frame")
+loadingBarFill.Size = UDim2.new(0, 0, 1, 0) -- starts empty
+loadingBarFill.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+loadingBarFill.Parent = loadingBarBG
 
-local function setAge(age)
-	ageLabel.Text = "Age: " .. age
-end
+-- Create Percentage Label
+local percentLabel = Instance.new("TextLabel")
+percentLabel.Size = UDim2.new(1, 0, 1, 0)
+percentLabel.BackgroundTransparency = 1
+percentLabel.Text = "0%"
+percentLabel.TextColor3 = Color3.new(1,1,1)
+percentLabel.Parent = loadingBarBG
 
-local function agePet()
-	while holding and currentAge < maxAge do
-		local heldPet = getHeldPet()
-		if not heldPet then
-			ageLabel.Text = "❌ No Pet Held"
-			break
-		end
+-- Create Pet Age Label
+local petAgeLabel = Instance.new("TextLabel")
+petAgeLabel.Size = UDim2.new(0, 200, 0, 50)
+petAgeLabel.Position = UDim2.new(0.5, -100, 0.5, 70)
+petAgeLabel.Text = "Pet Age: (unknown)"
+petAgeLabel.Parent = screenGui
 
-		currentAge += 1
-		setAge(currentAge)
-		wait(waitTimePerAge)
-	end
+local loading = false
+local holdTime = 0
+local totalHoldTime = 300 -- 5 minutes = 300 seconds
 
-	if currentAge >= maxAge then
-		loadingFrame.Visible = true
-		for i = 0, 100 do
-			percentText.Text = i .. "%"
-			wait(0.03)
-		end
-		percentText.Text = "✅ Done 100%"
-	end
-end
-
--- Button Events
 button.MouseButton1Down:Connect(function()
-	local heldPet = getHeldPet()
-	if heldPet and currentAge < maxAge then
-		holding = true
-		agePet()
-	end
+    if loading then return end
+    loading = true
+    holdTime = 0
+    loadingBarFill.Size = UDim2.new(0, 0, 1, 0)
+    percentLabel.Text = "0%"
+    
+    -- Start counting hold time
+    while loading and holdTime < totalHoldTime do
+        wait(0.1)
+        holdTime = holdTime + 0.1
+        local percent = math.clamp(holdTime / totalHoldTime, 0, 1)
+        loadingBarFill.Size = UDim2.new(percent, 0, 1, 0)
+        percentLabel.Text = math.floor(percent * 100).."%"
+    end
+    
+    if loading then
+        petAgeLabel.Text = "Pet Age: 50"
+    end
+    
+    loading = false
 end)
 
 button.MouseButton1Up:Connect(function()
-	holding = false
+    loading = false
+    loadingBarFill.Size = UDim2.new(0, 0, 1, 0)
+    percentLabel.Text = "0%"
 end)
