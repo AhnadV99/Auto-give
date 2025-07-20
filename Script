@@ -1,59 +1,83 @@
--- ✅ Grow a Garden Auto Script by Zeetuan
--- 🔁 Auto Collect + Auto Give w/ chat toggles
--- 🎯 Supports mutation names + random KG
+-- 🌱 Grow a Garden Auto Gift + Teleport Script
+-- 🔥 By Zeetuan (Z)
+-- ⚠️ For educational use only
 
-local player = game.Players.LocalPlayer
-local char = player.Character or player.CharacterAdded:Wait()
-local hrp = char:WaitForChild("HumanoidRootPart")
+-- GUI Setup
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local ScreenGui = Instance.new("ScreenGui", LocalPlayer.PlayerGui)
+ScreenGui.Name = "StealPetGUI"
 
--- 🔧 Toggle state
-local autoCollect = false
-local autoGive = false
+local Frame = Instance.new("Frame", ScreenGui)
+Frame.Size = UDim2.new(0, 250, 0, 150)
+Frame.Position = UDim2.new(0.5, -125, 0.2, 0)
+Frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+Frame.BorderSizePixel = 0
 
--- 🧠 Target fruit list
-local fruitNames = {
-    "Tomato", "Green Apple", "Avocado", "Sugar Apple",
-    "Prickly Pear", "Loquat", "Cauliflower", "Feijoa",
-    "Bell Pepper", "Kiwi"
-}
+local Title = Instance.new("TextLabel", Frame)
+Title.Size = UDim2.new(1, 0, 0.2, 0)
+Title.Text = "🌟 Auto Steal Pet"
+Title.TextColor3 = Color3.new(1,1,1)
+Title.BackgroundTransparency = 1
+Title.Font = Enum.Font.GothamBold
+Title.TextScaled = true
 
--- 🔍 Check if fruit name contains a keyword (e.g. "Wet Tomato 2.1kg")
-local function isTargetFruit(name)
-	for _, keyword in ipairs(fruitNames) do
-		if name:lower():find(keyword:lower()) then
-			return true
-		end
-	end
-	return false
-end
+local TextBox = Instance.new("TextBox", Frame)
+TextBox.Size = UDim2.new(0.9, 0, 0.25, 0)
+TextBox.Position = UDim2.new(0.05, 0, 0.25, 0)
+TextBox.PlaceholderText = "Enter target username"
+TextBox.Text = ""
+TextBox.TextScaled = true
+TextBox.Font = Enum.Font.Gotham
 
--- 💬 Chat toggle commands
-player.Chatted:Connect(function(msg)
-	msg = msg:lower()
-	if msg == "!collect" then
-		autoCollect = not autoCollect
-		warn("[Auto Collect] is now", autoCollect and "ON" or "OFF")
-	elseif msg == "!give" then
-		autoGive = not autoGive
-		warn("[Auto Give] is now", autoGive and "ON" or "OFF")
-	end
-end)
+local Button = Instance.new("TextButton", Frame)
+Button.Size = UDim2.new(0.9, 0, 0.25, 0)
+Button.Position = UDim2.new(0.05, 0, 0.55, 0)
+Button.Text = "Steal Raccoon 🦝"
+Button.BackgroundColor3 = Color3.fromRGB(80, 120, 255)
+Button.TextScaled = true
+Button.Font = Enum.Font.GothamBold
+Button.TextColor3 = Color3.new(1,1,1)
 
--- 🔁 Main loop (check ClickDetectors)
-task.spawn(function()
-	while true do
-		task.wait(0.3)
-		for _, obj in pairs(workspace:GetDescendants()) do
-			if obj:IsA("Part") and isTargetFruit(obj.Name) then
-				local click = obj:FindFirstChildOfClass("ClickDetector")
-				if click then
-					pcall(function()
-						if autoCollect or autoGive then
-							fireclickdetector(click)
-						end
-					end)
-				end
-			end
-		end
-	end
+local Output = Instance.new("TextLabel", Frame)
+Output.Size = UDim2.new(0.9, 0, 0.15, 0)
+Output.Position = UDim2.new(0.05, 0, 0.85, 0)
+Output.Text = ""
+Output.TextScaled = true
+Output.Font = Enum.Font.Gotham
+Output.TextColor3 = Color3.new(1, 0.3, 0.3)
+Output.BackgroundTransparency = 1
+
+-- Core Steal Logic
+Button.MouseButton1Click:Connect(function()
+    local targetName = TextBox.Text
+    local target = Players:FindFirstChild(targetName)
+
+    if not target or not target.Character or not LocalPlayer.Character then
+        Output.Text = "❌ Player not found!"
+        return
+    end
+
+    -- 1. Teleport them to you
+    local targetHRP = target.Character:FindFirstChild("HumanoidRootPart")
+    local myHRP = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if targetHRP and myHRP then
+        targetHRP.CFrame = myHRP.CFrame + Vector3.new(3, 0, 0)
+    end
+
+    -- 2. Try to make them gift you a rare pet (Raccoon)
+    local giftRemote = game.ReplicatedStorage:FindFirstChild("GiftPetRemote") -- 🔧 Replace with real name
+    if giftRemote then
+        local success, err = pcall(function()
+            giftRemote:FireServer("Raccoon", LocalPlayer)
+        end)
+
+        if success then
+            Output.Text = "✅ Tried to gift Raccoon!"
+        else
+            Output.Text = "⚠️ Gift failed: " .. tostring(err)
+        end
+    else
+        Output.Text = "❌ Gift remote not found!"
+    end
 end)
