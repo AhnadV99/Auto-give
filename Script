@@ -9,7 +9,7 @@ screenGui.Name = "PetAgeGui"
 
 local button = Instance.new("TextButton")
 button.Size = UDim2.new(0, 120, 0, 40)
-button.Position = UDim2.new(1, -130, 0.5, -20) -- Middle right
+button.Position = UDim2.new(1, -130, 0.5, -20)
 button.AnchorPoint = Vector2.new(0, 0)
 button.Text = "Age Pet"
 button.BackgroundColor3 = Color3.fromRGB(40, 170, 255)
@@ -42,10 +42,23 @@ local function getHeldPet()
 	return nil
 end
 
+-- Ensure Age IntValue exists
+local function ensureAgeValue(pet)
+	local ageValue = pet:FindFirstChild("Age")
+	if not ageValue then
+		ageValue = Instance.new("IntValue")
+		ageValue.Name = "Age"
+		ageValue.Value = 0
+		ageValue.Parent = pet
+	end
+	return ageValue
+end
+
 -- Add visual age label
 local function setupAgeLabel(pet)
-	if not pet:FindFirstChild("AgeLabel") then
-		local label = Instance.new("BillboardGui", pet)
+	local label = pet:FindFirstChild("AgeLabel")
+	if not label then
+		label = Instance.new("BillboardGui", pet)
 		label.Name = "AgeLabel"
 		label.Size = UDim2.new(0, 100, 0, 30)
 		label.StudsOffset = Vector3.new(0, 2, 0)
@@ -61,31 +74,19 @@ local function setupAgeLabel(pet)
 	end
 end
 
--- Get current age number
-local function getCurrentAge(pet)
+-- Sync label to actual age value
+local function updateAgeLabel(pet)
+	local ageValue = pet:FindFirstChild("Age")
 	local label = pet:FindFirstChild("AgeLabel")
-	if label then
+	if ageValue and label then
 		local textLabel = label:FindFirstChildOfClass("TextLabel")
 		if textLabel then
-			local ageStr = string.match(textLabel.Text, "%[Age (%d+)%]")
-			return tonumber(ageStr) or 0
-		end
-	end
-	return 0
-end
-
--- Update age
-local function setAge(pet, newAge)
-	local label = pet:FindFirstChild("AgeLabel")
-	if label then
-		local textLabel = label:FindFirstChildOfClass("TextLabel")
-		if textLabel then
-			textLabel.Text = string.format("[Age %d]", newAge)
+			textLabel.Text = string.format("[Age %d]", ageValue.Value)
 		end
 	end
 end
 
--- Handle button click
+-- Button click
 local isRunning = false
 button.MouseButton1Click:Connect(function()
 	if isRunning then return end
@@ -99,6 +100,8 @@ button.MouseButton1Click:Connect(function()
 	end
 
 	setupAgeLabel(pet)
+	local ageValue = ensureAgeValue(pet)
+
 	isRunning = true
 	button.Text = "Aging..."
 	loadingBG.Visible = true
@@ -106,11 +109,11 @@ button.MouseButton1Click:Connect(function()
 
 	for i = 1, 100 do
 		loadingBar.Size = UDim2.new(0, i * 1.5, 0, 10)
-		wait(3) -- 3 seconds x 100 = 300s = 5 minutes
+		wait(0.03) -- (100 x 0.03 = ~3 seconds for demo)
 	end
 
-	local currentAge = getCurrentAge(pet)
-	setAge(pet, currentAge + 1)
+	ageValue.Value += 1
+	updateAgeLabel(pet)
 
 	-- Reset UI
 	loadingBar.Visible = false
