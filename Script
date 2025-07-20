@@ -1,142 +1,136 @@
--- FULL "Grow a Garden" Pet Age Script
--- v1566 Compatible | Fully commented | Designed for holding any pet
--- Created for Z | ChatGPT Rewrite | 200+ lines
+-- 🧠 LocalScript (place this inside StarterGui)
 
--- Services
+-- SERVICES
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
-local VirtualInputManager = game:GetService("VirtualInputManager")
-local StarterGui = game:GetService("StarterGui")
 
--- Player Variables
+-- PLAYER
 local player = Players.LocalPlayer
-local mouse = player:GetMouse()
 local character = player.Character or player.CharacterAdded:Wait()
 
--- UI Setup
-local ScreenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
-ScreenGui.Name = "PetAgeGUI"
+-- GUI SETUP
+local screenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+screenGui.Name = "PetAgeGUI"
+screenGui.ResetOnSpawn = false
 
--- Frame
-local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 200, 0, 150)
-frame.Position = UDim2.new(1, -210, 0.5, -75) -- middle-right side
-frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-frame.BackgroundTransparency = 0.3
-frame.BorderSizePixel = 2
-frame.Parent = ScreenGui
+-- BUTTON
+local ageButton = Instance.new("TextButton")
+ageButton.Parent = screenGui
+ageButton.Size = UDim2.new(0, 140, 0, 50)
+ageButton.Position = UDim2.new(1, -160, 0.5, -25) -- Right-middle
+ageButton.AnchorPoint = Vector2.new(0.5, 0.5)
+ageButton.Text = "🕒 Age Pet"
+ageButton.TextScaled = true
+ageButton.BackgroundColor3 = Color3.fromRGB(60, 200, 80)
+ageButton.TextColor3 = Color3.new(1,1,1)
+ageButton.BorderSizePixel = 0
+ageButton.ZIndex = 10
+ageButton.Visible = true
 
--- Button
-local button = Instance.new("TextButton")
-button.Size = UDim2.new(1, -20, 0, 50)
-button.Position = UDim2.new(0, 10, 0, 10)
-button.Text = "Age Pet"
-button.Font = Enum.Font.GothamBlack
-button.TextSize = 22
-button.TextColor3 = Color3.fromRGB(255, 255, 255)
-button.BackgroundColor3 = Color3.fromRGB(100, 0, 0)
-button.Parent = frame
+-- STATUS LABEL
+local statusLabel = Instance.new("TextLabel")
+statusLabel.Parent = screenGui
+statusLabel.Size = UDim2.new(0, 250, 0, 40)
+statusLabel.Position = UDim2.new(1, -160, 0.5, 35)
+statusLabel.AnchorPoint = Vector2.new(0.5, 0)
+statusLabel.Text = "Waiting..."
+statusLabel.TextScaled = true
+statusLabel.BackgroundTransparency = 1
+statusLabel.TextColor3 = Color3.new(1,1,1)
 
--- Progress Bar
-local progressBar = Instance.new("Frame")
-progressBar.Size = UDim2.new(1, -20, 0, 20)
-progressBar.Position = UDim2.new(0, 10, 0, 70)
-progressBar.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-progressBar.BorderSizePixel = 0
-progressBar.Parent = frame
-
--- Fill inside bar
-local fill = Instance.new("Frame")
-fill.Size = UDim2.new(0, 0, 1, 0)
-fill.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
-fill.BorderSizePixel = 0
-fill.Parent = progressBar
-
--- Age Label
-local ageLabel = Instance.new("TextLabel")
-ageLabel.Size = UDim2.new(1, -20, 0, 30)
-ageLabel.Position = UDim2.new(0, 10, 0, 100)
-ageLabel.Text = "Current Pet Age: N/A"
-ageLabel.Font = Enum.Font.Gotham
-ageLabel.TextSize = 18
-ageLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-ageLabel.BackgroundTransparency = 1
-ageLabel.Parent = frame
-
--- Get held pet function
+-- FIND PET FUNCTION
 local function getHeldPet()
-	for _, item in ipairs(player.Character:GetChildren()) do
-		if item:IsA("Tool") and item:FindFirstChild("Handle") then
-			if item:FindFirstChild("Age") then
-				return item
-			end
-		end
-	end
-	return nil
+    local backpack = player:FindFirstChild("Backpack")
+    local char = player.Character
+    local pet = nil
+
+    if char then
+        for _, obj in ipairs(char:GetChildren()) do
+            if obj:IsA("Model") and obj:FindFirstChild("NameTag") and obj:FindFirstChild("Age") then
+                return obj
+            end
+        end
+    end
+
+    if backpack then
+        for _, obj in ipairs(backpack:GetChildren()) do
+            if obj:IsA("Tool") and obj:FindFirstChild("Handle") then
+                return obj
+            end
+        end
+    end
+
+    return pet
 end
 
--- Update age label and ESP
-local function updateAgeDisplay(pet)
-	if pet and pet:FindFirstChild("Age") then
-		ageLabel.Text = "Current Pet Age: " .. tostring(pet.Age.Value)
-	else
-		ageLabel.Text = "Current Pet Age: N/A"
-	end
+-- AGE LOOP
+local aging = false
+local function startAging()
+    if aging then return end
+    aging = true
+
+    while aging do
+        local pet = getHeldPet()
+        if pet then
+            local ageValue = pet:FindFirstChild("Age")
+            if ageValue and ageValue:IsA("NumberValue") then
+                ageValue.Value = ageValue.Value + 1
+                statusLabel.Text = pet.Name .. " [Age: " .. ageValue.Value .. "] ✅"
+            else
+                statusLabel.Text = "⚠️ Pet found but no age property."
+            end
+        else
+            statusLabel.Text = "❌ No pet held!"
+        end
+        wait(1)
+    end
 end
 
--- Animate progress bar to full and add age
-local function startAging(pet)
-	if not pet or not pet:FindFirstChild("Age") then
-		ageLabel.Text = "No pet held"
-		return
-	end
-
-	-- Disable button during aging
-	button.Text = "Aging..."
-	button.AutoButtonColor = false
-	button.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-	button.Active = false
-
-	local progress = 0
-	local duration = 5 -- 5 seconds aging
-	local step = 0.01
-
-	local startTime = tick()
-	while progress < 1 do
-		RunService.RenderStepped:Wait()
-		progress = math.min(1, (tick() - startTime) / duration)
-		fill.Size = UDim2.new(progress, 0, 1, 0)
-	end
-
-	-- Add age
-	local ageValue = pet:FindFirstChild("Age")
-	if ageValue then
-		ageValue.Value += 1
-	end
-
-	-- Reset UI
-	updateAgeDisplay(pet)
-	button.Text = "Age Pet"
-	button.BackgroundColor3 = Color3.fromRGB(100, 0, 0)
-	button.Active = true
+-- STOP AGING (optional if needed)
+local function stopAging()
+    aging = false
+    statusLabel.Text = "⏹️ Stopped aging."
 end
 
--- Button click handler
-button.MouseButton1Click:Connect(function()
-	local pet = getHeldPet()
-	startAging(pet)
+-- BUTTON CLICK
+ageButton.MouseButton1Click:Connect(function()
+    if not aging then
+        statusLabel.Text = "⏳ Aging started..."
+        startAging()
+    else
+        stopAging()
+    end
 end)
 
--- Update loop to always track held pet
-RunService.RenderStepped:Connect(function()
-	local pet = getHeldPet()
-	updateAgeDisplay(pet)
-end)
+-- ESP (Optional Visual Aid)
+local function showESP(pet)
+    local billboard = pet:FindFirstChild("ESP") or Instance.new("BillboardGui", pet)
+    billboard.Name = "ESP"
+    billboard.Size = UDim2.new(0, 100, 0, 50)
+    billboard.AlwaysOnTop = true
+    billboard.StudsOffset = Vector3.new(0, 3, 0)
 
--- Notify success
-StarterGui:SetCore("SendNotification", {
-	Title = "Pet Age GUI Loaded",
-	Text = "Ready to age your pets!",
-	Duration = 4
-})
+    local label = billboard:FindFirstChild("Text") or Instance.new("TextLabel", billboard)
+    label.Name = "Text"
+    label.Size = UDim2.new(1, 0, 1, 0)
+    label.BackgroundTransparency = 1
+    label.TextScaled = true
+    label.TextColor3 = Color3.new(1,1,0)
+
+    RunService.RenderStepped:Connect(function()
+        if pet and pet:FindFirstChild("Age") then
+            label.Text = pet.Name .. "\nAge: " .. pet.Age.Value
+        else
+            label.Text = "No Age Info"
+        end
+    end)
+end
+
+-- Show ESP on Pet
+RunService.Heartbeat:Connect(function()
+    local heldPet = getHeldPet()
+    if heldPet and not heldPet:FindFirstChild("ESP") then
+        showESP(heldPet)
+    end
+end)
