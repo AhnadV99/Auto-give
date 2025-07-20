@@ -1,52 +1,68 @@
--- GUI references
-local button = script.Parent:WaitForChild("HoldButton")
-local ageLabel = script.Parent:WaitForChild("AgeLabel")
-local loadingFrame = script.Parent:WaitForChild("LoadingFrame")
-local percentText = loadingFrame:WaitForChild("Percent")
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
 
--- Variables
+-- GUI elements
+local gui = script.Parent
+local button = gui:FindFirstChild("HoldButton")
+local ageLabel = gui:FindFirstChild("AgeLabel")
+local loadingFrame = gui:FindFirstChild("LoadingFrame")
+local percentText = loadingFrame and loadingFrame:FindFirstChild("Percent")
+
+-- Settings
 local holding = false
 local maxAge = 50
 local currentAge = 0
-local waitTimePerAge = 6 -- 300 sec / 50 ages = 6 sec per age
+local waitTimePerAge = 6 -- 5 minutes total = 50 * 6 seconds
 
--- Initial UI setup
+-- UI Setup
 loadingFrame.Visible = false
-ageLabel.Text = "" -- No starting age shown
+ageLabel.Text = ""
 
--- Function to update age text
-local function setAge(newAge)
-	ageLabel.Text = "Age: " .. newAge
+local function getHeldPet()
+	local pet = character:FindFirstChild("Pet") -- change if needed
+	if pet and pet:FindFirstChild("Holding") and pet.Holding.Value == true then
+		return pet
+	end
+	return nil
 end
 
--- Function to simulate aging while holding button
-local function ageUp()
+local function setAge(age)
+	ageLabel.Text = "Age: " .. age
+end
+
+local function agePet()
 	while holding and currentAge < maxAge do
+		local heldPet = getHeldPet()
+		if not heldPet then
+			ageLabel.Text = "❌ No Pet Held"
+			break
+		end
+
 		currentAge += 1
 		setAge(currentAge)
 		wait(waitTimePerAge)
 	end
 
-	-- Once pet reaches age 50, show loading
 	if currentAge >= maxAge then
 		loadingFrame.Visible = true
 		for i = 0, 100 do
 			percentText.Text = i .. "%"
 			wait(0.03)
 		end
-		percentText.Text = "Done 100% ✅"
+		percentText.Text = "✅ Done 100%"
 	end
 end
 
--- Button press starts holding
+-- Button Events
 button.MouseButton1Down:Connect(function()
-	if not holding and currentAge < maxAge then
+	local heldPet = getHeldPet()
+	if heldPet and currentAge < maxAge then
 		holding = true
-		ageUp()
+		agePet()
 	end
 end)
 
--- Button release stops holding
 button.MouseButton1Up:Connect(function()
 	holding = false
 end)
