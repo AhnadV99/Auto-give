@@ -1,74 +1,142 @@
-local Players = game:GetService("Players")
-local player = Players.LocalPlayer
-local petFolder = workspace:WaitForChild("Pets") -- Your pet folder in workspace
-local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
-gui.Name = "PetAgingGui"
+local player = game.Players.LocalPlayer
+local mouse = player:GetMouse()
+
+-- Create ScreenGui
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "PetAgeGui"
+screenGui.Parent = player:WaitForChild("PlayerGui")
 
 -- Create Button
 local button = Instance.new("TextButton")
-button.Size = UDim2.new(0, 160, 0, 50)
-button.Position = UDim2.new(1, -180, 0.5, -25) -- Middle right
-button.AnchorPoint = Vector2.new(0, 0.5)
+button.Name = "AgeTo50Button"
+button.Size = UDim2.new(0, 140, 0, 50)
+button.Position = UDim2.new(1, -150, 0.5, -25)  -- middle right side
+button.AnchorPoint = Vector2.new(1, 0.5) -- anchor to right middle for more precise positioning
+button.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+button.TextColor3 = Color3.new(1, 1, 1)
+button.Font = Enum.Font.SourceSansBold
+button.TextSize = 22
 button.Text = "Age to 50"
-button.BackgroundColor3 = Color3.fromRGB(30, 144, 255)
-button.TextScaled = true
-button.Parent = gui
+button.Parent = screenGui
 
--- Create Percentage Label
-local percentLabel = Instance.new("TextLabel")
-percentLabel.Size = UDim2.new(0, 160, 0, 40)
-percentLabel.Position = UDim2.new(1, -180, 0.5, 30)
-percentLabel.Text = ""
-percentLabel.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-percentLabel.TextColor3 = Color3.fromRGB(0, 0, 0)
-percentLabel.TextScaled = true
-percentLabel.Parent = gui
+-- Create Loading Text
+local loadingText = Instance.new("TextLabel")
+loadingText.Name = "LoadingText"
+loadingText.Size = UDim2.new(0, 140, 0, 30)
+loadingText.Position = UDim2.new(1, -150, 0.5, -65) -- above button
+loadingText.AnchorPoint = Vector2.new(1, 0.5)
+loadingText.BackgroundTransparency = 0.5
+loadingText.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+loadingText.TextColor3 = Color3.new(1, 1, 1)
+loadingText.Font = Enum.Font.SourceSansBold
+loadingText.TextSize = 18
+loadingText.Text = ""
+loadingText.Visible = false
+loadingText.Parent = screenGui
 
+-- Helper function to get currently held pet
 local function getHeldPet()
-	for _, pet in pairs(petFolder:GetChildren()) do
-		if pet:IsA("Model") and pet:FindFirstChild("Owner") then
-			if pet.Owner.Value == player and pet:FindFirstChild("HumanoidRootPart") then
-				if pet.HumanoidRootPart:FindFirstChild("Held") and pet.HumanoidRootPart.Held.Value == true then
-					return pet
-				end
-			end
-		end
-	end
-	return nil
+    local character = player.Character
+    if not character then return nil end
+
+    -- Check for a pet model attached to character or held (example approach)
+    -- You need to adjust this depending on your pet system
+    -- This example assumes pet is a child named "HeldPet" or similar
+
+    local heldPet = character:FindFirstChild("HeldPet")
+    if heldPet then
+        return heldPet
+    end
+
+    -- Alternatively, detect pet via tool or whatever your system uses
+    -- Example: check for Tool named "PetTool"
+    local tool = character:FindFirstChildOfClass("Tool")
+    if tool and tool.Name == "PetTool" then
+        -- Assuming pet model is parent of tool or linked
+        return tool.Parent -- or wherever your pet is stored
+    end
+
+    return nil
 end
 
-local running = false
+-- Function to update pet age visually one by one
+local function agePetTo50(pet)
+    if not pet then return end
 
-button.MouseButton1Click:Connect(function()
-	if running then return end
-	local pet = getHeldPet()
-	if not pet then
-		percentLabel.Text = "No pet held"
-		return
-	end
+    local currentAge = pet:GetAttribute("Age")
+    if not currentAge then currentAge = 1 end
+    currentAge = tonumber(currentAge)
 
-	local ageValue = pet:FindFirstChild("Age")
-	if not ageValue or not ageValue:IsA("NumberValue") then
-		percentLabel.Text = "Missing 'Age'"
-		return
-	end
+    for age = currentAge + 1, 50 do
+        wait(0.1)  -- speed of age increment (100ms per age)
+        pet:SetAttribute("Age", age)
+        -- You can add visual updates here (e.g. pet size, color, or text)
+    end
+end
 
-	running = true
-	local totalTime = 300 -- 5 minutes
-	local steps = 50
-	local delayPerStep = totalTime / steps
+-- Function for loading animation for 5 minutes (300s)
+local function loadingAnimation()
+    loadingText.Visible = true
+    local totalTime = 300 -- 5 minutes in seconds
+    local increment = 1   -- 1 second increments
+    local elapsed = 0
 
-	for i = 1, steps do
-		if not running then break end
-		task.wait(delayPerStep)
+    while elapsed < totalTime do
+        elapsed = elapsed + increment
+        local percent = math.floor((elapsed / totalTime) * 100)
+        loadingText.Text = "Loading: " .. percent .. "%"
+        wait(increment)
+    end
 
-		if ageValue.Value < 50 then
-			ageValue.Value += 1
-		end
-		local percentage = math.floor((i / steps) * 100)
-		percentLabel.Text = percentage .. "%"
-	end
+    loadingText.Text = "Loading: 100%"
+    wait(0.5)
+    loadingText.Visible = false
+end
 
-	percentLabel.Text = "Done!"
-	running = false
+-- Button hold logic
+local holding = false
+local holdStartTime = 0
+
+button.MouseButton1Down:Connect(function()
+    holding = true
+    holdStartTime = tick()
+
+    -- Run loading animation while holding
+    loadingText.Visible = true
+
+    local totalTime = 300 -- 5 minutes in seconds
+    while holding do
+        local elapsed = tick() - holdStartTime
+        if elapsed >= totalTime then
+            loadingText.Text = "Loading: 100%"
+            break
+        else
+            local percent = math.floor((elapsed / totalTime) * 100)
+            loadingText.Text = "Loading: " .. percent .. "%"
+        end
+        wait(0.5)
+    end
+
+    loadingText.Visible = false
+
+    if not holding then
+        -- released before finished
+        return
+    end
+
+    -- Get pet and age it
+    local pet = getHeldPet()
+    if pet then
+        agePetTo50(pet)
+    else
+        -- No pet found
+        loadingText.Text = "No held pet found!"
+        loadingText.Visible = true
+        wait(2)
+        loadingText.Visible = false
+    end
+end)
+
+button.MouseButton1Up:Connect(function()
+    holding = false
 end)
