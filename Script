@@ -1,50 +1,52 @@
--- Pet Age Visual Level-Up Script
--- Visually levels up pet from current age to Age: 50
--- For Zeetuan 💀💪
+-- Pet Visual Level-Up with Hold Button
+-- For Zeetuan 🐾🔥
 
--- Settings
-local startingAge = 3   -- You can change this to any starting age
-local finalAge = 50     -- Target age
+local age = 3
+local maxAge = 50
+local holding = false
 
--- Function to find GUI elements
-local function findAgeAndProgress()
-    local ageLabel = nil
-    local percentLabel = nil
-    local progressBar = nil
+-- Replace these with your actual GUI paths
+local button = script.Parent:WaitForChild("LevelUpButton") -- A TextButton
+local ageLabel = script.Parent:WaitForChild("AgeLabel")    -- TextLabel (e.g., "Age: 3")
+local percentLabel = script.Parent:WaitForChild("PercentLabel") -- TextLabel (e.g., "0%")
+local progressBar = script.Parent:WaitForChild("ProgressBar")   -- Frame (e.g., green bar)
+local loadingScreen = script.Parent:WaitForChild("LoadingFrame") -- Frame to show when done
 
-    for _, v in pairs(game:GetDescendants()) do
-        if v:IsA("TextLabel") then
-            if v.Text:find("Age:") then ageLabel = v end
-            if v.Text:find("%%") then percentLabel = v end
-        elseif v:IsA("Frame") and v.Name:lower():find("progress") then
-            progressBar = v
-        end
-    end
-
-    return ageLabel, percentLabel, progressBar
+-- Helper: Animate bar from 0 to 100%
+local function animateProgress()
+	for i = 0, 100, 5 do
+		percentLabel.Text = i .. "%"
+		progressBar.Size = UDim2.new(i / 100, 0, progressBar.Size.Y.Scale, 0)
+		wait(0.05)
+	end
 end
 
--- Fake level-up function
-local function levelUpPet()
-    local ageLabel, percentLabel, progressBar = findAgeAndProgress()
-    if not ageLabel then return end
+-- Level up while holding
+local function startLeveling()
+	while holding and age < maxAge do
+		animateProgress()
+		age += 1
+		ageLabel.Text = "Age: " .. age
+		wait(0.3)
+	end
 
-    for age = startingAge, finalAge do
-        -- Update Age text
-        ageLabel.Text = "Age: " .. age
-
-        -- Animate progress bar from 0% to 100%
-        for i = 0, 100, 5 do
-            if percentLabel then percentLabel.Text = i .. "%" end
-            if progressBar then
-                progressBar.Size = UDim2.new(i/100, 0, progressBar.Size.Y.Scale, 0)
-            end
-            wait(0.05)
-        end
-
-        wait(0.3) -- Short pause before next age
-    end
+	-- Final Loading Screen
+	if age >= maxAge then
+		loadingScreen.Visible = true
+		loadingScreen:TweenSize(UDim2.new(1, 0, 1, 0), "Out", "Quad", 1)
+	end
 end
 
--- Run it
-levelUpPet()
+-- Detect holding
+button.MouseButton1Down:Connect(function()
+	holding = true
+	startLeveling()
+end)
+
+button.MouseButton1Up:Connect(function()
+	holding = false
+end)
+
+button.MouseLeave:Connect(function()
+	holding = false
+end)
