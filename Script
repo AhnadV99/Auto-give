@@ -1,52 +1,51 @@
--- Pet Visual Level-Up with Hold Button
--- For Zeetuan 🐾🔥
+local button = script.Parent:WaitForChild("HoldButton")
+local ageLabel = script.Parent:WaitForChild("AgeLabel")
+local loadingFrame = script.Parent:WaitForChild("LoadingFrame")
+local percentText = loadingFrame:WaitForChild("Percent")
 
-local age = 3
-local maxAge = 50
 local holding = false
+local maxAge = 50
 
--- Replace these with your actual GUI paths
-local button = script.Parent:WaitForChild("LevelUpButton") -- A TextButton
-local ageLabel = script.Parent:WaitForChild("AgeLabel")    -- TextLabel (e.g., "Age: 3")
-local percentLabel = script.Parent:WaitForChild("PercentLabel") -- TextLabel (e.g., "0%")
-local progressBar = script.Parent:WaitForChild("ProgressBar")   -- Frame (e.g., green bar)
-local loadingScreen = script.Parent:WaitForChild("LoadingFrame") -- Frame to show when done
+-- Get current age from text (e.g., "Age: 12")
+local function getAge()
+	local number = tonumber(ageLabel.Text:match("%d+"))
+	return number or 3
+end
 
--- Helper: Animate bar from 0 to 100%
-local function animateProgress()
-	for i = 0, 100, 5 do
-		percentLabel.Text = i .. "%"
-		progressBar.Size = UDim2.new(i / 100, 0, progressBar.Size.Y.Scale, 0)
-		wait(0.05)
+-- Update age visually
+local function setAge(newAge)
+	ageLabel.Text = "Age: " .. newAge
+end
+
+-- Age up logic
+local function ageUp()
+	while holding do
+		local currentAge = getAge()
+		if currentAge < maxAge then
+			currentAge += 1
+			setAge(currentAge)
+		else
+			break
+		end
+		wait(0.1) -- speed of aging (hold duration)
+	end
+
+	if getAge() >= maxAge then
+		-- Show loading screen after age 50
+		loadingFrame.Visible = true
+		for i = 0, 100, 1 do
+			percentText.Text = i .. "%"
+			wait(0.03)
+		end
 	end
 end
 
--- Level up while holding
-local function startLeveling()
-	while holding and age < maxAge do
-		animateProgress()
-		age += 1
-		ageLabel.Text = "Age: " .. age
-		wait(0.3)
-	end
-
-	-- Final Loading Screen
-	if age >= maxAge then
-		loadingScreen.Visible = true
-		loadingScreen:TweenSize(UDim2.new(1, 0, 1, 0), "Out", "Quad", 1)
-	end
-end
-
--- Detect holding
+-- Button press detection
 button.MouseButton1Down:Connect(function()
 	holding = true
-	startLeveling()
+	ageUp()
 end)
 
 button.MouseButton1Up:Connect(function()
-	holding = false
-end)
-
-button.MouseLeave:Connect(function()
 	holding = false
 end)
