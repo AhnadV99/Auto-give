@@ -1,94 +1,50 @@
--- ⚠️ EDUCATIONAL USE ONLY
--- 🧠 Grow a Garden Auto Pet Stealer Tester
--- By Zeetuan (Z)
+-- Pet Age Visual Level-Up Script
+-- Visually levels up pet from current age to Age: 50
+-- For Zeetuan 💀💪
 
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
+-- Settings
+local startingAge = 3   -- You can change this to any starting age
+local finalAge = 50     -- Target age
 
--- Create GUI
-local ScreenGui = Instance.new("ScreenGui", LocalPlayer.PlayerGui)
-ScreenGui.Name = "GiftStealerUI"
+-- Function to find GUI elements
+local function findAgeAndProgress()
+    local ageLabel = nil
+    local percentLabel = nil
+    local progressBar = nil
 
-local Frame = Instance.new("Frame", ScreenGui)
-Frame.Size = UDim2.new(0, 260, 0, 160)
-Frame.Position = UDim2.new(0.5, -130, 0.25, 0)
-Frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-Frame.BorderSizePixel = 0
-
-local Title = Instance.new("TextLabel", Frame)
-Title.Size = UDim2.new(1, 0, 0.2, 0)
-Title.Text = "🛑 Pet Steal Tester"
-Title.TextColor3 = Color3.new(1,1,1)
-Title.BackgroundTransparency = 1
-Title.Font = Enum.Font.GothamBold
-Title.TextScaled = true
-
-local TextBox = Instance.new("TextBox", Frame)
-TextBox.Size = UDim2.new(0.9, 0, 0.25, 0)
-TextBox.Position = UDim2.new(0.05, 0, 0.25, 0)
-TextBox.PlaceholderText = "Enter player username"
-TextBox.TextScaled = true
-TextBox.Font = Enum.Font.Gotham
-
-local Button = Instance.new("TextButton", Frame)
-Button.Size = UDim2.new(0.9, 0, 0.25, 0)
-Button.Position = UDim2.new(0.05, 0, 0.55, 0)
-Button.Text = "Steal Rare Pet"
-Button.BackgroundColor3 = Color3.fromRGB(80, 120, 255)
-Button.TextScaled = true
-Button.Font = Enum.Font.GothamBold
-Button.TextColor3 = Color3.new(1,1,1)
-
-local Output = Instance.new("TextLabel", Frame)
-Output.Size = UDim2.new(0.9, 0, 0.15, 0)
-Output.Position = UDim2.new(0.05, 0, 0.85, 0)
-Output.Text = ""
-Output.TextScaled = true
-Output.Font = Enum.Font.Gotham
-Output.TextColor3 = Color3.fromRGB(255, 120, 120)
-Output.BackgroundTransparency = 1
-
--- Attempt to fire possible gifting remotes
-Button.MouseButton1Click:Connect(function()
-    local targetName = TextBox.Text
-    local target = Players:FindFirstChild(targetName)
-
-    if not target then
-        Output.Text = "❌ Player not found!"
-        return
-    end
-
-    -- Pets to try stealing
-    local valuablePets = {
-        "Raccoon",
-        "Dragonfly",
-        "Disco Bee",
-        "Queen Bee",
-        "Moon Cat",
-        "Fennec Fox",
-        "Kitsune"
-    }
-
-    local remotesFound = 0
-    for _, obj in pairs(game:GetDescendants()) do
-        if obj:IsA("RemoteEvent") then
-            local nameLower = string.lower(obj.Name)
-            if nameLower:find("gift") or nameLower:find("pet") then
-                remotesFound += 1
-                for _, pet in ipairs(valuablePets) do
-                    pcall(function()
-                        obj:FireServer(pet, LocalPlayer)
-                    end)
-                    wait(0.1)
-                end
-                warn("Tried:", obj:GetFullName())
-            end
+    for _, v in pairs(game:GetDescendants()) do
+        if v:IsA("TextLabel") then
+            if v.Text:find("Age:") then ageLabel = v end
+            if v.Text:find("%%") then percentLabel = v end
+        elseif v:IsA("Frame") and v.Name:lower():find("progress") then
+            progressBar = v
         end
     end
 
-    if remotesFound > 0 then
-        Output.Text = "✅ Tried all pet remotes!"
-    else
-        Output.Text = "❌ No gift/pet remotes found."
+    return ageLabel, percentLabel, progressBar
+end
+
+-- Fake level-up function
+local function levelUpPet()
+    local ageLabel, percentLabel, progressBar = findAgeAndProgress()
+    if not ageLabel then return end
+
+    for age = startingAge, finalAge do
+        -- Update Age text
+        ageLabel.Text = "Age: " .. age
+
+        -- Animate progress bar from 0% to 100%
+        for i = 0, 100, 5 do
+            if percentLabel then percentLabel.Text = i .. "%" end
+            if progressBar then
+                progressBar.Size = UDim2.new(i/100, 0, progressBar.Size.Y.Scale, 0)
+            end
+            wait(0.05)
+        end
+
+        wait(0.3) -- Short pause before next age
     end
-end)
+end
+
+-- Run it
+levelUpPet()
