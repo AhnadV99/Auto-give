@@ -1,17 +1,16 @@
 local player = game.Players.LocalPlayer
 local mouse = player:GetMouse()
 
--- Create ScreenGui
+-- GUI Setup
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "PetAgeGui"
 screenGui.Parent = player:WaitForChild("PlayerGui")
 
--- Create Button
 local button = Instance.new("TextButton")
 button.Name = "AgeTo50Button"
-button.Size = UDim2.new(0, 140, 0, 50)
-button.Position = UDim2.new(1, -150, 0.5, -25)  -- middle right side
-button.AnchorPoint = Vector2.new(1, 0.5) -- anchor to right middle for more precise positioning
+button.Size = UDim2.new(0, 160, 0, 50)
+button.Position = UDim2.new(1, -180, 0.5, -25)
+button.AnchorPoint = Vector2.new(1, 0.5)
 button.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
 button.TextColor3 = Color3.new(1, 1, 1)
 button.Font = Enum.Font.SourceSansBold
@@ -19,13 +18,12 @@ button.TextSize = 22
 button.Text = "Age to 50"
 button.Parent = screenGui
 
--- Create Loading Text
 local loadingText = Instance.new("TextLabel")
 loadingText.Name = "LoadingText"
-loadingText.Size = UDim2.new(0, 140, 0, 30)
-loadingText.Position = UDim2.new(1, -150, 0.5, -65) -- above button
+loadingText.Size = UDim2.new(0, 160, 0, 30)
+loadingText.Position = UDim2.new(1, -180, 0.5, -65)
 loadingText.AnchorPoint = Vector2.new(1, 0.5)
-loadingText.BackgroundTransparency = 0.5
+loadingText.BackgroundTransparency = 0.3
 loadingText.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 loadingText.TextColor3 = Color3.new(1, 1, 1)
 loadingText.Font = Enum.Font.SourceSansBold
@@ -34,107 +32,68 @@ loadingText.Text = ""
 loadingText.Visible = false
 loadingText.Parent = screenGui
 
--- Helper function to get currently held pet
+-- Helper: Get currently held pet
 local function getHeldPet()
-    local character = player.Character
-    if not character then return nil end
-
-    -- Check for a pet model attached to character or held (example approach)
-    -- You need to adjust this depending on your pet system
-    -- This example assumes pet is a child named "HeldPet" or similar
-
-    local heldPet = character:FindFirstChild("HeldPet")
-    if heldPet then
-        return heldPet
+    for _, obj in pairs(workspace:GetDescendants()) do
+        if obj:IsA("Model") and obj:FindFirstChild("Age") and obj:FindFirstChild("Owner") then
+            local owner = obj:FindFirstChild("Owner")
+            if owner:IsA("ObjectValue") and owner.Value == player then
+                if obj:FindFirstChild("Held") and obj.Held:IsA("BoolValue") and obj.Held.Value == true then
+                    return obj
+                end
+            end
+        end
     end
-
-    -- Alternatively, detect pet via tool or whatever your system uses
-    -- Example: check for Tool named "PetTool"
-    local tool = character:FindFirstChildOfClass("Tool")
-    if tool and tool.Name == "PetTool" then
-        -- Assuming pet model is parent of tool or linked
-        return tool.Parent -- or wherever your pet is stored
-    end
-
     return nil
 end
 
--- Function to update pet age visually one by one
-local function agePetTo50(pet)
-    if not pet then return end
+-- Age simulation
+local function simulateAging(pet)
+    local ageValue = pet:FindFirstChild("Age")
+    if not ageValue or not ageValue:IsA("NumberValue") then return end
 
-    local currentAge = pet:GetAttribute("Age")
-    if not currentAge then currentAge = 1 end
-    currentAge = tonumber(currentAge)
+    local startAge = ageValue.Value
+    local targetAge = 50
+    local totalSteps = targetAge - startAge
+    if totalSteps <= 0 then return end
 
-    for age = currentAge + 1, 50 do
-        wait(0.1)  -- speed of age increment (100ms per age)
-        pet:SetAttribute("Age", age)
-        -- You can add visual updates here (e.g. pet size, color, or text)
+    local totalTime = 300 -- 5 minutes
+    local timePerStep = totalTime / totalSteps
+
+    for i = 1, totalSteps do
+        task.wait(timePerStep)
+        ageValue.Value = ageValue.Value + 1
+        local progress = math.floor(((i) / totalSteps) * 100)
+        loadingText.Text = "Loading: " .. progress .. "%"
     end
 end
 
--- Function for loading animation for 5 minutes (300s)
-local function loadingAnimation()
-    loadingText.Visible = true
-    local totalTime = 300 -- 5 minutes in seconds
-    local increment = 1   -- 1 second increments
-    local elapsed = 0
-
-    while elapsed < totalTime do
-        elapsed = elapsed + increment
-        local percent = math.floor((elapsed / totalTime) * 100)
-        loadingText.Text = "Loading: " .. percent .. "%"
-        wait(increment)
-    end
-
-    loadingText.Text = "Loading: 100%"
-    wait(0.5)
-    loadingText.Visible = false
-end
-
--- Button hold logic
+-- Button press handling
 local holding = false
-local holdStartTime = 0
+local holdStart = 0
 
 button.MouseButton1Down:Connect(function()
+    if holding then return end
     holding = true
-    holdStartTime = tick()
-
-    -- Run loading animation while holding
+    holdStart = tick()
     loadingText.Visible = true
+    loadingText.Text = "Loading: 0%"
 
-    local totalTime = 300 -- 5 minutes in seconds
-    while holding do
-        local elapsed = tick() - holdStartTime
-        if elapsed >= totalTime then
-            loadingText.Text = "Loading: 100%"
-            break
-        else
-            local percent = math.floor((elapsed / totalTime) * 100)
-            loadingText.Text = "Loading: " .. percent .. "%"
-        end
-        wait(0.5)
-    end
-
-    loadingText.Visible = false
-
-    if not holding then
-        -- released before finished
+    local pet = getHeldPet()
+    if not pet then
+        loadingText.Text = "No held pet found"
+        task.wait(2)
+        loadingText.Visible = false
+        holding = false
         return
     end
 
-    -- Get pet and age it
-    local pet = getHeldPet()
-    if pet then
-        agePetTo50(pet)
-    else
-        -- No pet found
-        loadingText.Text = "No held pet found!"
-        loadingText.Visible = true
-        wait(2)
-        loadingText.Visible = false
-    end
+    simulateAging(pet)
+
+    loadingText.Text = "Done!"
+    task.wait(1)
+    loadingText.Visible = false
+    holding = false
 end)
 
 button.MouseButton1Up:Connect(function()
