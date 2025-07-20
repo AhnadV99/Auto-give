@@ -1,90 +1,142 @@
-local UserInputService = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
+local player = game.Players.LocalPlayer
+local mouse = player:GetMouse()
 
-local ageButton = script.Parent:WaitForChild("AgeTo50Button")
-local progressText = script.Parent:WaitForChild("ProgressText")
+-- Create ScreenGui
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "PetAgeGui"
+screenGui.Parent = player:WaitForChild("PlayerGui")
 
-local TARGET_AGE = 50
-local DURATION_SECONDS = 5 * 60 -- 5 minutes
+-- Create Button
+local button = Instance.new("TextButton")
+button.Name = "AgeTo50Button"
+button.Size = UDim2.new(0, 140, 0, 50)
+button.Position = UDim2.new(1, -150, 0.5, -25)  -- middle right side
+button.AnchorPoint = Vector2.new(1, 0.5) -- anchor to right middle for more precise positioning
+button.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+button.TextColor3 = Color3.new(1, 1, 1)
+button.Font = Enum.Font.SourceSansBold
+button.TextSize = 22
+button.Text = "Age to 50"
+button.Parent = screenGui
 
-local holdingButton = false
-local elapsedTime = 0
+-- Create Loading Text
+local loadingText = Instance.new("TextLabel")
+loadingText.Name = "LoadingText"
+loadingText.Size = UDim2.new(0, 140, 0, 30)
+loadingText.Position = UDim2.new(1, -150, 0.5, -65) -- above button
+loadingText.AnchorPoint = Vector2.new(1, 0.5)
+loadingText.BackgroundTransparency = 0.5
+loadingText.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+loadingText.TextColor3 = Color3.new(1, 1, 1)
+loadingText.Font = Enum.Font.SourceSansBold
+loadingText.TextSize = 18
+loadingText.Text = ""
+loadingText.Visible = false
+loadingText.Parent = screenGui
 
+-- Helper function to get currently held pet
 local function getHeldPet()
-    local player = game.Players.LocalPlayer
     local character = player.Character
     if not character then return nil end
-    return character:FindFirstChild("HeldPet")
-end
 
-local function getPetAgeValue(pet)
-    if not pet then return nil end
-    local ageValue = pet:FindFirstChild("Age")
-    if ageValue and ageValue:IsA("NumberValue") then
-        return ageValue
+    -- Check for a pet model attached to character or held (example approach)
+    -- You need to adjust this depending on your pet system
+    -- This example assumes pet is a child named "HeldPet" or similar
+
+    local heldPet = character:FindFirstChild("HeldPet")
+    if heldPet then
+        return heldPet
     end
+
+    -- Alternatively, detect pet via tool or whatever your system uses
+    -- Example: check for Tool named "PetTool"
+    local tool = character:FindFirstChildOfClass("Tool")
+    if tool and tool.Name == "PetTool" then
+        -- Assuming pet model is parent of tool or linked
+        return tool.Parent -- or wherever your pet is stored
+    end
+
     return nil
 end
 
-local function onButtonPressed()
+-- Function to update pet age visually one by one
+local function agePetTo50(pet)
+    if not pet then return end
+
+    local currentAge = pet:GetAttribute("Age")
+    if not currentAge then currentAge = 1 end
+    currentAge = tonumber(currentAge)
+
+    for age = currentAge + 1, 50 do
+        wait(0.1)  -- speed of age increment (100ms per age)
+        pet:SetAttribute("Age", age)
+        -- You can add visual updates here (e.g. pet size, color, or text)
+    end
+end
+
+-- Function for loading animation for 5 minutes (300s)
+local function loadingAnimation()
+    loadingText.Visible = true
+    local totalTime = 300 -- 5 minutes in seconds
+    local increment = 1   -- 1 second increments
+    local elapsed = 0
+
+    while elapsed < totalTime do
+        elapsed = elapsed + increment
+        local percent = math.floor((elapsed / totalTime) * 100)
+        loadingText.Text = "Loading: " .. percent .. "%"
+        wait(increment)
+    end
+
+    loadingText.Text = "Loading: 100%"
+    wait(0.5)
+    loadingText.Visible = false
+end
+
+-- Button hold logic
+local holding = false
+local holdStartTime = 0
+
+button.MouseButton1Down:Connect(function()
+    holding = true
+    holdStartTime = tick()
+
+    -- Run loading animation while holding
+    loadingText.Visible = true
+
+    local totalTime = 300 -- 5 minutes in seconds
+    while holding do
+        local elapsed = tick() - holdStartTime
+        if elapsed >= totalTime then
+            loadingText.Text = "Loading: 100%"
+            break
+        else
+            local percent = math.floor((elapsed / totalTime) * 100)
+            loadingText.Text = "Loading: " .. percent .. "%"
+        end
+        wait(0.5)
+    end
+
+    loadingText.Visible = false
+
+    if not holding then
+        -- released before finished
+        return
+    end
+
+    -- Get pet and age it
     local pet = getHeldPet()
-    if not pet then
-        progressText.Text = "No held pet detected."
-        return
+    if pet then
+        agePetTo50(pet)
+    else
+        -- No pet found
+        loadingText.Text = "No held pet found!"
+        loadingText.Visible = true
+        wait(2)
+        loadingText.Visible = false
     end
+end)
 
-    local ageValue = getPetAgeValue(pet)
-    if not ageValue then
-        progressText.Text = "Pet has no Age value."
-        return
-    end
-
-    if ageValue.Value >= TARGET_AGE then
-        progressText.Text = "Pet is already age 50 or older."
-        return
-    end
-
-    holdingButton = true
-    elapsedTime = 0
-    progressText.Text = "Loading: 0%"
-
-    local startAge = ageValue.Value
-    local totalSteps = TARGET_AGE - startAge
-    local lastStep = startAge
-
-    local connection
-    connection = RunService.Heartbeat:Connect(function(deltaTime)
-        if not holdingButton then
-            connection:Disconnect()
-            return
-        end
-
-        elapsedTime = elapsedTime + deltaTime
-        local progress = math.clamp(elapsedTime / DURATION_SECONDS, 0, 1)
-        progressText.Text = string.format("Loading: %d%%", math.floor(progress * 100))
-
-        local expectedAge = startAge + math.floor(totalSteps * progress)
-
-        if expectedAge > lastStep then
-            ageValue.Value = expectedAge
-            lastStep = expectedAge
-        end
-
-        if progress >= 1 then
-            holdingButton = false
-            progressText.Text = "Done! Pet is now age 50."
-            connection:Disconnect()
-        end
-    end)
-end
-
-local function onButtonReleased()
-    holdingButton = false
-    progressText.Text = "Loading stopped."
-end
-
-ageButton.MouseButton1Down:Connect(onButtonPressed)
-ageButton.MouseButton1Up:Connect(onButtonReleased)
-ageButton.MouseLeave:Connect(onButtonReleased)
-
-progressText.Text = ""
+button.MouseButton1Up:Connect(function()
+    holding = false
+end)
