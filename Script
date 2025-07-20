@@ -1,77 +1,130 @@
+-- Services
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-
 local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 
--- 🐾 Wait until you're holding a Tool (pet)
-local function waitForPetTool()
-    while true do
-        for _, item in ipairs(character:GetChildren()) do
-            if item:IsA("Tool") then
-                return item
-            end
-        end
-        task.wait(1)
-    end
+-- UI Setup
+local screenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+screenGui.Name = "PetAgeGui"
+screenGui.ResetOnSpawn = false
+
+local button = Instance.new("TextButton")
+button.Size = UDim2.new(0, 120, 0, 40)
+button.Position = UDim2.new(1, -130, 0.5, -20)
+button.AnchorPoint = Vector2.new(0, 0)
+button.Text = "Age Pet"
+button.BackgroundColor3 = Color3.fromRGB(40, 170, 255)
+button.TextColor3 = Color3.new(1, 1, 1)
+button.Font = Enum.Font.SourceSansBold
+button.TextSize = 20
+button.Parent = screenGui
+
+local loadingBar = Instance.new("Frame", screenGui)
+loadingBar.Size = UDim2.new(0, 0, 0, 10)
+loadingBar.Position = UDim2.new(0.5, -75, 0.5, 30)
+loadingBar.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+loadingBar.BorderSizePixel = 0
+loadingBar.Visible = false
+
+local loadingBG = Instance.new("Frame", screenGui)
+loadingBG.Size = UDim2.new(0, 150, 0, 10)
+loadingBG.Position = UDim2.new(0.5, -75, 0.5, 30)
+loadingBG.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+loadingBG.BorderSizePixel = 0
+loadingBG.Visible = false
+
+-- Find held pet
+local function getHeldPet()
+	for _, tool in ipairs(character:GetChildren()) do
+		if tool:IsA("Tool") then
+			return tool
+		end
+	end
+	return nil
 end
 
--- 🔎 Search for actual Age value inside the tool (recursive)
-local function findAgeValue(instance)
-    for _, child in ipairs(instance:GetDescendants()) do
-        if (child:IsA("IntValue") or child:IsA("NumberValue")) and child.Name:lower():find("age") then
-            return child
-        end
-    end
-    return nil
+-- Find real Age value inside pet tool
+local function findRealAgeValue(tool)
+	for _, obj in ipairs(tool:GetDescendants()) do
+		if (obj:IsA("IntValue") or obj:IsA("NumberValue")) and obj.Name:lower():find("age") then
+			return obj
+		end
+	end
+	return nil
 end
 
--- 🧠 Make ESP over the pet
-local function createBillboard(tool, ageValue)
-    local billboard = Instance.new("BillboardGui")
-    billboard.Name = "PetESP"
-    billboard.Size = UDim2.new(0, 200, 0, 50)
-    billboard.Adornee = tool:FindFirstChildWhichIsA("Part") or tool.Handle
-    billboard.AlwaysOnTop = true
-    billboard.StudsOffset = Vector3.new(0, 2, 0)
+-- Add visual age label
+local function setupAgeLabel(pet, ageValue)
+	local label = pet:FindFirstChild("AgeLabel")
+	if not label then
+		label = Instance.new("BillboardGui")
+		label.Name = "AgeLabel"
+		label.Size = UDim2.new(0, 100, 0, 30)
+		label.StudsOffset = Vector3.new(0, 2, 0)
+		label.AlwaysOnTop = true
+		label.Adornee = pet:FindFirstChild("Handle") or pet:FindFirstChildWhichIsA("Part")
+		label.Parent = pet
 
-    local label = Instance.new("TextLabel", billboard)
-    label.Size = UDim2.new(1, 0, 1, 0)
-    label.BackgroundTransparency = 1
-    label.TextColor3 = Color3.fromRGB(255, 255, 0)
-    label.TextStrokeTransparency = 0
-    label.TextScaled = true
-    label.Font = Enum.Font.FredokaOne
-    label.Text = "Loading..."
-
-    billboard.Parent = tool
-
-    -- 🕒 Update text with pet name and age
-    RunService.RenderStepped:Connect(function()
-        if ageValue and ageValue.Parent then
-            label.Text = tool.Name .. " | Age: " .. tostring(ageValue.Value)
-        else
-            label.Text = tool.Name .. " | Age: ???"
-        end
-    end)
+		local text = Instance.new("TextLabel", label)
+		text.Size = UDim2.new(1, 0, 1, 0)
+		text.BackgroundTransparency = 1
+		text.TextColor3 = Color3.fromRGB(255, 255, 255)
+		text.TextScaled = true
+		text.Font = Enum.Font.GothamBold
+	end
+	updateAgeLabel(pet, ageValue)
 end
 
--- 🚀 Start aging loop
-local function startAging(ageValue)
-    while ageValue and ageValue.Parent do
-        ageValue.Value += 1
-        task.wait(1)
-    end
+-- Sync label to actual age value
+function updateAgeLabel(pet, ageValue)
+	local label = pet:FindFirstChild("AgeLabel")
+	if ageValue and label then
+		local textLabel = label:FindFirstChildOfClass("TextLabel")
+		if textLabel then
+			textLabel.Text = string.format("[Age %d]", ageValue.Value)
+		end
+	end
 end
 
--- 🌟 MAIN SCRIPT
-local tool = waitForPetTool()
-local ageValue = findAgeValue(tool)
+-- Button click
+local isRunning = false
+button.MouseButton1Click:Connect(function()
+	if isRunning then return end
 
-if not ageValue then
-    warn("❌ No Age value found in held tool!")
-else
-    print("✅ Found Age:", ageValue:GetFullName())
-    createBillboard(tool, ageValue)
-    startAging(ageValue)
-end
+	local pet = getHeldPet()
+	if not pet then
+		button.Text = "No Pet Held"
+		wait(2)
+		button.Text = "Age Pet"
+		return
+	end
+
+	local ageValue = findRealAgeValue(pet)
+	if not ageValue then
+		button.Text = "No Age Found"
+		wait(2)
+		button.Text = "Age Pet"
+		return
+	end
+
+	setupAgeLabel(pet, ageValue)
+
+	isRunning = true
+	button.Text = "Aging..."
+	loadingBG.Visible = true
+	loadingBar.Visible = true
+
+	for i = 1, 100 do
+		loadingBar.Size = UDim2.new(0, i * 1.5, 0, 10)
+		wait(0.03)
+	end
+
+	ageValue.Value += 1
+	updateAgeLabel(pet, ageValue)
+
+	loadingBar.Visible = false
+	loadingBar.Size = UDim2.new(0, 0, 0, 10)
+	loadingBG.Visible = false
+	button.Text = "Age Pet"
+	isRunning = false
+end)
