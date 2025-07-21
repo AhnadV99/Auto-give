@@ -1,83 +1,103 @@
--- 🌱 Grow a Garden Auto Gift + Teleport Script
--- 🔥 By Zeetuan (Z)
--- ⚠️ For educational use only
+-- 🌱 Grow a Garden v1566 - Auto Gift Any Pet Script
+-- ⚠️ For educational purposes only
 
--- GUI Setup
+-- SERVICES
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
-local ScreenGui = Instance.new("ScreenGui", LocalPlayer.PlayerGui)
-ScreenGui.Name = "StealPetGUI"
 
-local Frame = Instance.new("Frame", ScreenGui)
-Frame.Size = UDim2.new(0, 250, 0, 150)
-Frame.Position = UDim2.new(0.5, -125, 0.2, 0)
-Frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-Frame.BorderSizePixel = 0
+-- GUI
+local screenGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
+screenGui.Name = "StealPetGUI"
 
-local Title = Instance.new("TextLabel", Frame)
-Title.Size = UDim2.new(1, 0, 0.2, 0)
-Title.Text = "🌟 Auto Steal Pet"
-Title.TextColor3 = Color3.new(1,1,1)
-Title.BackgroundTransparency = 1
-Title.Font = Enum.Font.GothamBold
-Title.TextScaled = true
+local frame = Instance.new("Frame", screenGui)
+frame.Size = UDim2.new(0, 280, 0, 180)
+frame.Position = UDim2.new(0.5, -140, 0.2, 0)
+frame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+frame.BorderSizePixel = 0
 
-local TextBox = Instance.new("TextBox", Frame)
-TextBox.Size = UDim2.new(0.9, 0, 0.25, 0)
-TextBox.Position = UDim2.new(0.05, 0, 0.25, 0)
-TextBox.PlaceholderText = "Enter target username"
-TextBox.Text = ""
-TextBox.TextScaled = true
-TextBox.Font = Enum.Font.Gotham
+local title = Instance.new("TextLabel", frame)
+title.Size = UDim2.new(1, 0, 0.2, 0)
+title.Text = "🎁 Auto Gift Stealer"
+title.TextColor3 = Color3.new(1, 1, 1)
+title.BackgroundTransparency = 1
+title.Font = Enum.Font.GothamBold
+title.TextScaled = true
 
-local Button = Instance.new("TextButton", Frame)
-Button.Size = UDim2.new(0.9, 0, 0.25, 0)
-Button.Position = UDim2.new(0.05, 0, 0.55, 0)
-Button.Text = "Steal Raccoon 🦝"
-Button.BackgroundColor3 = Color3.fromRGB(80, 120, 255)
-Button.TextScaled = true
-Button.Font = Enum.Font.GothamBold
-Button.TextColor3 = Color3.new(1,1,1)
+-- Username input
+local usernameBox = Instance.new("TextBox", frame)
+usernameBox.Size = UDim2.new(0.9, 0, 0.2, 0)
+usernameBox.Position = UDim2.new(0.05, 0, 0.25, 0)
+usernameBox.PlaceholderText = "Enter target username"
+usernameBox.Text = ""
+usernameBox.TextScaled = true
+usernameBox.Font = Enum.Font.Gotham
 
-local Output = Instance.new("TextLabel", Frame)
-Output.Size = UDim2.new(0.9, 0, 0.15, 0)
-Output.Position = UDim2.new(0.05, 0, 0.85, 0)
-Output.Text = ""
-Output.TextScaled = true
-Output.Font = Enum.Font.Gotham
-Output.TextColor3 = Color3.new(1, 0.3, 0.3)
-Output.BackgroundTransparency = 1
+-- Pet input
+local petBox = Instance.new("TextBox", frame)
+petBox.Size = UDim2.new(0.9, 0, 0.2, 0)
+petBox.Position = UDim2.new(0.05, 0, 0.48, 0)
+petBox.PlaceholderText = "Enter pet name (e.g. Blood Owl)"
+petBox.Text = ""
+petBox.TextScaled = true
+petBox.Font = Enum.Font.Gotham
 
--- Core Steal Logic
-Button.MouseButton1Click:Connect(function()
-    local targetName = TextBox.Text
-    local target = Players:FindFirstChild(targetName)
+-- Button
+local stealButton = Instance.new("TextButton", frame)
+stealButton.Size = UDim2.new(0.9, 0, 0.18, 0)
+stealButton.Position = UDim2.new(0.05, 0, 0.7, 0)
+stealButton.Text = "🎯 Attempt Steal Gift"
+stealButton.BackgroundColor3 = Color3.fromRGB(90, 140, 255)
+stealButton.TextColor3 = Color3.new(1, 1, 1)
+stealButton.TextScaled = true
+stealButton.Font = Enum.Font.GothamBold
 
-    if not target or not target.Character or not LocalPlayer.Character then
-        Output.Text = "❌ Player not found!"
-        return
-    end
+-- Output
+local output = Instance.new("TextLabel", frame)
+output.Size = UDim2.new(0.9, 0, 0.1, 0)
+output.Position = UDim2.new(0.05, 0, 0.9, 0)
+output.Text = ""
+output.TextColor3 = Color3.fromRGB(255, 80, 80)
+output.BackgroundTransparency = 1
+output.TextScaled = true
+output.Font = Enum.Font.Gotham
 
-    -- 1. Teleport them to you
-    local targetHRP = target.Character:FindFirstChild("HumanoidRootPart")
-    local myHRP = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-    if targetHRP and myHRP then
-        targetHRP.CFrame = myHRP.CFrame + Vector3.new(3, 0, 0)
-    end
+-- STEAL FUNCTION
+stealButton.MouseButton1Click:Connect(function()
+	local targetName = usernameBox.Text
+	local petName = petBox.Text
 
-    -- 2. Try to make them gift you a rare pet (Raccoon)
-    local giftRemote = game.ReplicatedStorage:FindFirstChild("GiftPetRemote") -- 🔧 Replace with real name
-    if giftRemote then
-        local success, err = pcall(function()
-            giftRemote:FireServer("Raccoon", LocalPlayer)
-        end)
+	if targetName == "" or petName == "" then
+		output.Text = "⚠️ Fill both username and pet name!"
+		return
+	end
 
-        if success then
-            Output.Text = "✅ Tried to gift Raccoon!"
-        else
-            Output.Text = "⚠️ Gift failed: " .. tostring(err)
-        end
-    else
-        Output.Text = "❌ Gift remote not found!"
-    end
+	local targetPlayer = Players:FindFirstChild(targetName)
+	if not targetPlayer or not targetPlayer.Character then
+		output.Text = "❌ Player not found!"
+		return
+	end
+
+	-- Teleport target to your position
+	local myRoot = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+	local theirRoot = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+	if myRoot and theirRoot then
+		theirRoot.CFrame = myRoot.CFrame + Vector3.new(3, 0, 0)
+	end
+
+	-- Attempt to gift the specified pet
+	local giftRemote = game.ReplicatedStorage:FindFirstChild("GiftPetRemote") -- Replace if named differently
+	if not giftRemote then
+		output.Text = "🚫 Gift remote not found!"
+		return
+	end
+
+	local success, err = pcall(function()
+		giftRemote:FireServer(petName, LocalPlayer)
+	end)
+
+	if success then
+		output.Text = "✅ Tried to steal: " .. petName
+	else
+		output.Text = "❌ Error: " .. tostring(err)
+	end
 end)
