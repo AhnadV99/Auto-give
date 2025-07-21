@@ -1,157 +1,89 @@
--- 🧠 Pet Aging System by Zeetuan
--- 🧠 This script handles automatic pet aging when a player holds any pet.
--- 🧠 The UI displays name, weight, age, and a "Made by Zeetuan" tag.
--- 🧠 The aging works by checking if the pet has an IntValue named "Age".
--- 🧠 Once the player touches the button, the aging starts forever.
+--[[
+📜 Script: Grow a Garden Pet ESP + Aging System
+🌱 Game Version: v1566
+👤 Made by Zeetuan
+--]]
 
+-- Services
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Player = Players.LocalPlayer
+local Character = Player.Character or Player.CharacterAdded:Wait()
 local RunService = game:GetService("RunService")
 
-local player = Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
+-- UI Setup
+local ScreenGui = Instance.new("ScreenGui", Player:WaitForChild("PlayerGui"))
+local Frame = Instance.new("Frame", ScreenGui)
+local PetInfo = Instance.new("TextLabel", Frame)
+local AgeButton = Instance.new("TextButton", Frame)
+local Credit = Instance.new("TextLabel", Frame)
 
--- 🖼️ Create Screen UI
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "PetAgingUI"
-screenGui.Parent = player:WaitForChild("PlayerGui")
+ScreenGui.Name = "ZeetuanPetESP"
+Frame.Size = UDim2.new(0, 300, 0, 150)
+Frame.Position = UDim2.new(0.5, -150, 0.7, 0)
+Frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+Frame.BackgroundTransparency = 0.3
+Frame.BorderSizePixel = 0
 
--- 📦 Main Frame
-local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 300, 0, 180)
-frame.Position = UDim2.new(0.5, -150, 0.2, 0)
-frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-frame.BorderSizePixel = 0
-frame.BackgroundTransparency = 0.2
-frame.Parent = screenGui
+PetInfo.Size = UDim2.new(1, 0, 0.5, 0)
+PetInfo.Position = UDim2.new(0, 0, 0, 0)
+PetInfo.TextScaled = true
+PetInfo.TextColor3 = Color3.new(1, 1, 1)
+PetInfo.BackgroundTransparency = 1
+PetInfo.Text = "No pet held"
 
--- 🏷️ Title
-local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, 0, 0, 30)
-title.BackgroundTransparency = 1
-title.TextColor3 = Color3.fromRGB(255, 255, 255)
-title.Text = "Pet Info"
-title.Font = Enum.Font.GothamBold
-title.TextSize = 22
-title.Parent = frame
+AgeButton.Size = UDim2.new(1, 0, 0.25, 0)
+AgeButton.Position = UDim2.new(0, 0, 0.5, 0)
+AgeButton.Text = "Age Pet"
+AgeButton.BackgroundColor3 = Color3.fromRGB(100, 200, 100)
+AgeButton.TextColor3 = Color3.new(1, 1, 1)
+AgeButton.TextScaled = true
 
--- 📋 Pet Name
-local nameLabel = Instance.new("TextLabel")
-nameLabel.Size = UDim2.new(1, -20, 0, 30)
-nameLabel.Position = UDim2.new(0, 10, 0, 40)
-nameLabel.BackgroundTransparency = 1
-nameLabel.TextColor3 = Color3.new(1, 1, 1)
-nameLabel.Text = "Pet: None"
-nameLabel.Font = Enum.Font.Gotham
-nameLabel.TextSize = 18
-nameLabel.TextXAlignment = Enum.TextXAlignment.Left
-nameLabel.Parent = frame
+Credit.Size = UDim2.new(1, 0, 0.25, 0)
+Credit.Position = UDim2.new(0, 0, 0.75, 0)
+Credit.Text = "Made by Zeetuan"
+Credit.TextColor3 = Color3.fromRGB(255, 255, 255)
+Credit.TextScaled = true
+Credit.BackgroundTransparency = 1
 
--- ⚖️ Weight
-local weightLabel = Instance.new("TextLabel")
-weightLabel.Size = UDim2.new(1, -20, 0, 30)
-weightLabel.Position = UDim2.new(0, 10, 0, 70)
-weightLabel.BackgroundTransparency = 1
-weightLabel.TextColor3 = Color3.new(1, 1, 1)
-weightLabel.Text = "Weight: 0kg"
-weightLabel.Font = Enum.Font.Gotham
-weightLabel.TextSize = 18
-weightLabel.TextXAlignment = Enum.TextXAlignment.Left
-weightLabel.Parent = frame
-
--- ⏳ Age
-local ageLabel = Instance.new("TextLabel")
-ageLabel.Size = UDim2.new(1, -20, 0, 30)
-ageLabel.Position = UDim2.new(0, 10, 0, 100)
-ageLabel.BackgroundTransparency = 1
-ageLabel.TextColor3 = Color3.new(1, 1, 1)
-ageLabel.Text = "Age: 0"
-ageLabel.Font = Enum.Font.Gotham
-ageLabel.TextSize = 18
-ageLabel.TextXAlignment = Enum.TextXAlignment.Left
-ageLabel.Parent = frame
-
--- ✍️ Credit
-local creditLabel = Instance.new("TextLabel")
-creditLabel.Size = UDim2.new(1, 0, 0, 20)
-creditLabel.Position = UDim2.new(0, 0, 1, -20)
-creditLabel.BackgroundTransparency = 1
-creditLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-creditLabel.Text = "Made by Zeetuan"
-creditLabel.Font = Enum.Font.GothamItalic
-creditLabel.TextSize = 14
-creditLabel.TextXAlignment = Enum.TextXAlignment.Center
-creditLabel.Parent = frame
-
--- 🔘 Start Button
-local startButton = Instance.new("TextButton")
-startButton.Size = UDim2.new(1, -40, 0, 40)
-startButton.Position = UDim2.new(0, 20, 1, -70)
-startButton.Text = "Start Aging"
-startButton.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
-startButton.TextColor3 = Color3.new(1, 1, 1)
-startButton.Font = Enum.Font.GothamBold
-startButton.TextSize = 20
-startButton.Parent = frame
-
--- 🔄 Variables
-local aging = false
-local currentPet = nil
-
--- 🔍 Get Held Tool
+-- Track Held Pet
+local heldPet = nil
 local function getHeldPet()
-	local tool = player.Character and player.Character:FindFirstChildOfClass("Tool")
-	if tool then
-		local ageVal = tool:FindFirstChild("Age")
-		local weightVal = tool:FindFirstChild("Weight")
-		if ageVal and weightVal then
-			return tool
+	for _, item in ipairs(Character:GetChildren()) do
+		if item:FindFirstChild("PetData") then
+			return item
 		end
 	end
 	return nil
 end
 
--- 🔁 Aging Loop
-local function startAging()
-	if aging then return end
-	aging = true
-	while aging do
-		currentPet = getHeldPet()
-		if currentPet then
-			local petName = currentPet.Name or "Unknown"
-			local ageVal = currentPet:FindFirstChild("Age")
-			local weightVal = currentPet:FindFirstChild("Weight")
-
-			if ageVal and typeof(ageVal.Value) == "number" then
-				ageVal.Value = ageVal.Value + 1
-				-- 📝 Update UI
-				nameLabel.Text = "Pet: " .. petName
-				weightLabel.Text = "Weight: " .. tostring(weightVal.Value) .. "kg"
-				ageLabel.Text = "Age: " .. tostring(ageVal.Value)
-			else
-				nameLabel.Text = "Pet: Invalid"
-				weightLabel.Text = "Weight: N/A"
-				ageLabel.Text = "Age: N/A"
-			end
-		else
-			nameLabel.Text = "Pet: None"
-			weightLabel.Text = "Weight: 0kg"
-			ageLabel.Text = "Age: 0"
-		end
-		wait(1)
+-- Aging Logic
+local function increaseAge(pet)
+	if not pet then return end
+	local petData = pet:FindFirstChild("PetData")
+	if petData and petData:FindFirstChild("Age") then
+		petData.Age.Value = petData.Age.Value + 1
 	end
 end
 
--- 🛑 Stop aging if needed
-local function stopAging()
-	aging = false
-end
-
--- 🧠 Button Touch Handler
-startButton.MouseButton1Click:Connect(function()
-	startAging()
+-- Button Click
+AgeButton.MouseButton1Click:Connect(function()
+	local pet = getHeldPet()
+	if pet then
+		increaseAge(pet)
+	end
 end)
 
--- 🧼 Optional: Reset on death
-player.CharacterAdded:Connect(function()
-	stopAging()
+-- Update UI Every Frame
+RunService.RenderStepped:Connect(function()
+	heldPet = getHeldPet()
+	if heldPet and heldPet:FindFirstChild("PetData") then
+		local petData = heldPet.PetData
+		local weight = petData:FindFirstChild("Weight") and petData.Weight.Value or "N/A"
+		local age = petData:FindFirstChild("Age") and petData.Age.Value or "N/A"
+		local name = heldPet.Name
+		PetInfo.Text = name .. "\n[" .. tostring(weight) .. " kg]  [Age: " .. tostring(age) .. "]"
+	else
+		PetInfo.Text = "No pet held"
+	end
 end)
