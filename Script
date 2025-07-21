@@ -1,103 +1,154 @@
--- 🌱 Grow a Garden v1566 - Auto Gift Any Pet Script
--- ⚠️ For educational purposes only
+-- Grow a Garden ESP + Pet Age Increaser
+-- Made by Zeetuan
 
--- SERVICES
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
+local player = game.Players.LocalPlayer
+local camera = workspace.CurrentCamera
+local uis = game:GetService("UserInputService")
+local runService = game:GetService("RunService")
 
--- GUI
-local screenGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
-screenGui.Name = "StealPetGUI"
+-- UI Setup
+local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+gui.Name = "ZeetuanPetESP"
 
-local frame = Instance.new("Frame", screenGui)
-frame.Size = UDim2.new(0, 280, 0, 180)
-frame.Position = UDim2.new(0.5, -140, 0.2, 0)
-frame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-frame.BorderSizePixel = 0
+local toggleButton = Instance.new("TextButton")
+toggleButton.Size = UDim2.new(0, 120, 0, 40)
+toggleButton.Position = UDim2.new(1, -130, 0.5, -20)
+toggleButton.AnchorPoint = Vector2.new(0.5, 0.5)
+toggleButton.BackgroundColor3 = Color3.fromRGB(50, 150, 255)
+toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleButton.Text = "Toggle Pet ESP"
+toggleButton.Font = Enum.Font.GothamBold
+toggleButton.TextSize = 14
+toggleButton.Parent = gui
 
-local title = Instance.new("TextLabel", frame)
-title.Size = UDim2.new(1, 0, 0.2, 0)
-title.Text = "🎁 Auto Gift Stealer"
-title.TextColor3 = Color3.new(1, 1, 1)
-title.BackgroundTransparency = 1
-title.Font = Enum.Font.GothamBold
-title.TextScaled = true
+local credit = Instance.new("TextLabel")
+credit.Size = UDim2.new(0, 200, 0, 20)
+credit.Position = UDim2.new(1, -210, 1, -30)
+credit.AnchorPoint = Vector2.new(0.5, 0.5)
+credit.BackgroundTransparency = 1
+credit.TextColor3 = Color3.fromRGB(180, 180, 180)
+credit.Text = "Made by Zeetuan"
+credit.Font = Enum.Font.Gotham
+credit.TextSize = 12
+credit.Parent = gui
 
--- Username input
-local usernameBox = Instance.new("TextBox", frame)
-usernameBox.Size = UDim2.new(0.9, 0, 0.2, 0)
-usernameBox.Position = UDim2.new(0.05, 0, 0.25, 0)
-usernameBox.PlaceholderText = "Enter target username"
-usernameBox.Text = ""
-usernameBox.TextScaled = true
-usernameBox.Font = Enum.Font.Gotham
+-- Variables
+local enabled = true
+local billboard = nil
+local petModel = nil
+local petAge = 0
+local petWeight = 0
+local petName = "Unknown"
+local lastUpdate = tick()
 
--- Pet input
-local petBox = Instance.new("TextBox", frame)
-petBox.Size = UDim2.new(0.9, 0, 0.2, 0)
-petBox.Position = UDim2.new(0.05, 0, 0.48, 0)
-petBox.PlaceholderText = "Enter pet name (e.g. Blood Owl)"
-petBox.Text = ""
-petBox.TextScaled = true
-petBox.Font = Enum.Font.Gotham
-
--- Button
-local stealButton = Instance.new("TextButton", frame)
-stealButton.Size = UDim2.new(0.9, 0, 0.18, 0)
-stealButton.Position = UDim2.new(0.05, 0, 0.7, 0)
-stealButton.Text = "🎯 Attempt Steal Gift"
-stealButton.BackgroundColor3 = Color3.fromRGB(90, 140, 255)
-stealButton.TextColor3 = Color3.new(1, 1, 1)
-stealButton.TextScaled = true
-stealButton.Font = Enum.Font.GothamBold
-
--- Output
-local output = Instance.new("TextLabel", frame)
-output.Size = UDim2.new(0.9, 0, 0.1, 0)
-output.Position = UDim2.new(0.05, 0, 0.9, 0)
-output.Text = ""
-output.TextColor3 = Color3.fromRGB(255, 80, 80)
-output.BackgroundTransparency = 1
-output.TextScaled = true
-output.Font = Enum.Font.Gotham
-
--- STEAL FUNCTION
-stealButton.MouseButton1Click:Connect(function()
-	local targetName = usernameBox.Text
-	local petName = petBox.Text
-
-	if targetName == "" or petName == "" then
-		output.Text = "⚠️ Fill both username and pet name!"
-		return
+-- Helper: Create Billboard GUI
+local function createBillboard()
+	if billboard then
+		billboard:Destroy()
 	end
 
-	local targetPlayer = Players:FindFirstChild(targetName)
-	if not targetPlayer or not targetPlayer.Character then
-		output.Text = "❌ Player not found!"
-		return
+	billboard = Instance.new("BillboardGui")
+	billboard.Size = UDim2.new(0, 200, 0, 60)
+	billboard.StudsOffset = Vector3.new(0, 3, 0)
+	billboard.Adornee = petModel.PrimaryPart
+	billboard.AlwaysOnTop = true
+	billboard.Parent = petModel
+
+	local nameLabel = Instance.new("TextLabel", billboard)
+	nameLabel.Name = "Name"
+	nameLabel.Size = UDim2.new(1, 0, 0.33, 0)
+	nameLabel.Position = UDim2.new(0, 0, 0, 0)
+	nameLabel.BackgroundTransparency = 1
+	nameLabel.TextColor3 = Color3.new(1, 0, 0.2)
+	nameLabel.Font = Enum.Font.GothamBold
+	nameLabel.TextScaled = true
+	nameLabel.Text = petName
+
+	local weightLabel = Instance.new("TextLabel", billboard)
+	weightLabel.Name = "Weight"
+	weightLabel.Size = UDim2.new(1, 0, 0.33, 0)
+	weightLabel.Position = UDim2.new(0, 0, 0.33, 0)
+	weightLabel.BackgroundTransparency = 1
+	weightLabel.TextColor3 = Color3.new(1, 1, 0.2)
+	weightLabel.Font = Enum.Font.Gotham
+	weightLabel.TextScaled = true
+	weightLabel.Text = string.format("[%.2f kg]", petWeight)
+
+	local ageLabel = Instance.new("TextLabel", billboard)
+	ageLabel.Name = "Age"
+	ageLabel.Size = UDim2.new(1, 0, 0.33, 0)
+	ageLabel.Position = UDim2.new(0, 0, 0.66, 0)
+	ageLabel.BackgroundTransparency = 1
+	ageLabel.TextColor3 = Color3.new(0.6, 1, 1)
+	ageLabel.Font = Enum.Font.Gotham
+	ageLabel.TextScaled = true
+	ageLabel.Text = string.format("[Age %d]", petAge)
+end
+
+-- Find Held Pet
+local function findHeldPet()
+	local char = player.Character
+	if not char then return nil end
+
+	for _, v in pairs(char:GetChildren()) do
+		if v:IsA("Model") and v:FindFirstChild("PetName") then
+			return v
+		end
+	end
+	return nil
+end
+
+-- Update ESP info
+local function updateESP()
+	if not petModel or not petModel.Parent then
+		petModel = findHeldPet()
+		if not petModel then return end
+
+		-- Read initial values
+		local petNameVal = petModel:FindFirstChild("PetName")
+		local petWeightVal = petModel:FindFirstChild("Weight")
+		local petAgeVal = petModel:FindFirstChild("Age")
+
+		if petNameVal and petWeightVal and petAgeVal then
+			petName = petNameVal.Value
+			petWeight = petWeightVal.Value
+			petAge = petAgeVal.Value
+			createBillboard()
+		end
 	end
 
-	-- Teleport target to your position
-	local myRoot = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-	local theirRoot = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
-	if myRoot and theirRoot then
-		theirRoot.CFrame = myRoot.CFrame + Vector3.new(3, 0, 0)
+	-- Age Increment
+	if tick() - lastUpdate >= 2 then
+		petAge = petAge + 1
+		lastUpdate = tick()
+
+		local ageLabel = billboard and billboard:FindFirstChild("Age")
+		if ageLabel then
+			ageLabel.Text = string.format("[Age %d]", petAge)
+		end
+
+		-- Try to update the real pet's Age property if writable
+		local ageValue = petModel:FindFirstChild("Age")
+		if ageValue and ageValue:IsA("NumberValue") then
+			ageValue.Value = petAge
+		end
 	end
+end
 
-	-- Attempt to gift the specified pet
-	local giftRemote = game.ReplicatedStorage:FindFirstChild("GiftPetRemote") -- Replace if named differently
-	if not giftRemote then
-		output.Text = "🚫 Gift remote not found!"
-		return
+-- Toggle visibility
+toggleButton.MouseButton1Click:Connect(function()
+	enabled = not enabled
+	toggleButton.Text = enabled and "ESP: ON" or "ESP: OFF"
+
+	if not enabled and billboard then
+		billboard:Destroy()
+		billboard = nil
 	end
+end)
 
-	local success, err = pcall(function()
-		giftRemote:FireServer(petName, LocalPlayer)
-	end)
-
-	if success then
-		output.Text = "✅ Tried to steal: " .. petName
-	else
-		output.Text = "❌ Error: " .. tostring(err)
+-- Run update
+runService.RenderStepped:Connect(function()
+	if enabled then
+		updateESP()
 	end
 end)
