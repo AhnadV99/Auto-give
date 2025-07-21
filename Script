@@ -1,89 +1,82 @@
---[[
-📜 Script: Grow a Garden Pet ESP + Aging System
-🌱 Game Version: v1566
-👤 Made by Zeetuan
---]]
+-- 🌱 Grow a Garden Auto Gift + Teleport Script
+-- 🔥 By Zeetuan (Z)
+-- ⚠️ For educational use only
 
--- Services
+-- GUI Setup
 local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Player = Players.LocalPlayer
-local Character = Player.Character or Player.CharacterAdded:Wait()
-local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+local ScreenGui = Instance.new("ScreenGui", LocalPlayer.PlayerGui)
+ScreenGui.Name = "StealPetGUI"
 
--- UI Setup
-local ScreenGui = Instance.new("ScreenGui", Player:WaitForChild("PlayerGui"))
 local Frame = Instance.new("Frame", ScreenGui)
-local PetInfo = Instance.new("TextLabel", Frame)
-local AgeButton = Instance.new("TextButton", Frame)
-local Credit = Instance.new("TextLabel", Frame)
-
-ScreenGui.Name = "ZeetuanPetESP"
-Frame.Size = UDim2.new(0, 300, 0, 150)
-Frame.Position = UDim2.new(0.5, -150, 0.7, 0)
-Frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-Frame.BackgroundTransparency = 0.3
+Frame.Size = UDim2.new(0, 250, 0, 150)
+Frame.Position = UDim2.new(0.5, -125, 0.2, 0)
+Frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 Frame.BorderSizePixel = 0
 
-PetInfo.Size = UDim2.new(1, 0, 0.5, 0)
-PetInfo.Position = UDim2.new(0, 0, 0, 0)
-PetInfo.TextScaled = true
-PetInfo.TextColor3 = Color3.new(1, 1, 1)
-PetInfo.BackgroundTransparency = 1
-PetInfo.Text = "No pet held"
+local Title = Instance.new("TextLabel", Frame)
+Title.Size = UDim2.new(1, 0, 0.2, 0)
+Title.Text = "🌟 Auto Steal Pet"
+Title.TextColor3 = Color3.new(1,1,1)
+Title.BackgroundTransparency = 1
+Title.Font = Enum.Font.GothamBold
+Title.TextScaled = true
 
-AgeButton.Size = UDim2.new(1, 0, 0.25, 0)
-AgeButton.Position = UDim2.new(0, 0, 0.5, 0)
-AgeButton.Text = "Age Pet"
-AgeButton.BackgroundColor3 = Color3.fromRGB(100, 200, 100)
-AgeButton.TextColor3 = Color3.new(1, 1, 1)
-AgeButton.TextScaled = true
+local TextBox = Instance.new("TextBox", Frame)
+TextBox.Size = UDim2.new(0.9, 0, 0.25, 0)
+TextBox.Position = UDim2.new(0.05, 0, 0.25, 0)
+TextBox.PlaceholderText = "Enter target username"
+TextBox.Text = ""
+TextBox.TextScaled = true
+TextBox.Font = Enum.Font.Gotham
 
-Credit.Size = UDim2.new(1, 0, 0.25, 0)
-Credit.Position = UDim2.new(0, 0, 0.75, 0)
-Credit.Text = "Made by Zeetuan"
-Credit.TextColor3 = Color3.fromRGB(255, 255, 255)
-Credit.TextScaled = true
-Credit.BackgroundTransparency = 1
+local Button = Instance.new("TextButton", Frame)
+Button.Size = UDim2.new(0.9, 0, 0.25, 0)
+Button.Position = UDim2.new(0.05, 0, 0.55, 0)
+Button.Text = "Steal Raccoon 🦝"
+Button.BackgroundColor3 = Color3.fromRGB(80, 120, 255)
+Button.TextScaled = true
+Button.Font = Enum.Font.GothamBold
+Button.TextColor3 = Color3.new(1,1,1)
 
--- Track Held Pet
-local heldPet = nil
-local function getHeldPet()
-	for _, item in ipairs(Character:GetChildren()) do
-		if item:FindFirstChild("PetData") then
-			return item
-		end
-	end
-	return nil
+local Output = Instance.new("TextLabel", Frame)
+Output.Size = UDim2.new(0.9, 0, 0.15, 0)
+Output.Position = UDim2.new(0.05, 0, 0.85, 0)
+Output.Text = ""
+Output.TextScaled = true
+Output.Font = Enum.Font.Gotham
+Output.TextColor3 = Color3.new(1, 0.3, 0.3)
+Output.BackgroundTransparency = 1
+
+-- Core Steal Logic
+Button.MouseButton1Click:Connect(function()
+local targetName = TextBox.Text
+local target = Players:FindFirstChild(targetName)
+
+if not target or not target.Character or not LocalPlayer.Character then  
+    Output.Text = "❌ Player not found!"  
+    return  
+end  
+
+-- 1. Teleport them to you  
+local targetHRP = target.Character:FindFirstChild("HumanoidRootPart")  
+local myHRP = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")  
+if targetHRP and myHRP then  
+    targetHRP.CFrame = myHRP.CFrame + Vector3.new(3, 0, 0)  
+end  
+
+-- 2. Try to make them gift you a rare pet (Raccoon)  
+local giftRemote = game.ReplicatedStorage:FindFirstChild("GiftPetRemote") -- 🔧 Replace with real name  
+if giftRemote then  
+    local success, err = pcall(function()  
+        giftRemote:FireServer("Raccoon", LocalPlayer)  
+    end)  
+
+    if success then  
+        Output.Text = "✅ Tried to gift Raccoon!"  
+    else  
+        Output.Text = "⚠️ Gift failed: " .. tostring(err)  
+    end  
+else  
+    Output.Text = "❌ Gift remote not found!"  
 end
-
--- Aging Logic
-local function increaseAge(pet)
-	if not pet then return end
-	local petData = pet:FindFirstChild("PetData")
-	if petData and petData:FindFirstChild("Age") then
-		petData.Age.Value = petData.Age.Value + 1
-	end
-end
-
--- Button Click
-AgeButton.MouseButton1Click:Connect(function()
-	local pet = getHeldPet()
-	if pet then
-		increaseAge(pet)
-	end
-end)
-
--- Update UI Every Frame
-RunService.RenderStepped:Connect(function()
-	heldPet = getHeldPet()
-	if heldPet and heldPet:FindFirstChild("PetData") then
-		local petData = heldPet.PetData
-		local weight = petData:FindFirstChild("Weight") and petData.Weight.Value or "N/A"
-		local age = petData:FindFirstChild("Age") and petData.Age.Value or "N/A"
-		local name = heldPet.Name
-		PetInfo.Text = name .. "\n[" .. tostring(weight) .. " kg]  [Age: " .. tostring(age) .. "]"
-	else
-		PetInfo.Text = "No pet held"
-	end
-end)
