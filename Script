@@ -1,140 +1,83 @@
--- ✅ Fixed Pet Aging GUI + ESP (v1566 compatible)
+-- 🌱 Grow a Garden Auto Gift + Teleport Script
+-- 🔥 By Zeetuan (Z)
+-- ⚠️ For educational use only
 
--- SERVICES
+-- GUI Setup
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+local ScreenGui = Instance.new("ScreenGui", LocalPlayer.PlayerGui)
+ScreenGui.Name = "StealPetGUI"
 
--- PLAYER
-local player = Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
+local Frame = Instance.new("Frame", ScreenGui)
+Frame.Size = UDim2.new(0, 250, 0, 150)
+Frame.Position = UDim2.new(0.5, -125, 0.2, 0)
+Frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+Frame.BorderSizePixel = 0
 
--- GUI SETUP
-local screenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
-screenGui.Name = "PetAgeGUI"
-screenGui.ResetOnSpawn = false
+local Title = Instance.new("TextLabel", Frame)
+Title.Size = UDim2.new(1, 0, 0.2, 0)
+Title.Text = "🌟 Auto Steal Pet"
+Title.TextColor3 = Color3.new(1,1,1)
+Title.BackgroundTransparency = 1
+Title.Font = Enum.Font.GothamBold
+Title.TextScaled = true
 
--- BUTTON
-local ageButton = Instance.new("TextButton")
-ageButton.Parent = screenGui
-ageButton.Size = UDim2.new(0, 140, 0, 50)
-ageButton.Position = UDim2.new(1, -160, 0.5, -25)
-ageButton.AnchorPoint = Vector2.new(0.5, 0.5)
-ageButton.Text = "🕒 Age Pet"
-ageButton.TextScaled = true
-ageButton.BackgroundColor3 = Color3.fromRGB(60, 200, 80)
-ageButton.TextColor3 = Color3.new(1,1,1)
-ageButton.BorderSizePixel = 0
-ageButton.ZIndex = 10
+local TextBox = Instance.new("TextBox", Frame)
+TextBox.Size = UDim2.new(0.9, 0, 0.25, 0)
+TextBox.Position = UDim2.new(0.05, 0, 0.25, 0)
+TextBox.PlaceholderText = "Enter target username"
+TextBox.Text = ""
+TextBox.TextScaled = true
+TextBox.Font = Enum.Font.Gotham
 
--- STATUS LABEL
-local statusLabel = Instance.new("TextLabel")
-statusLabel.Parent = screenGui
-statusLabel.Size = UDim2.new(0, 250, 0, 40)
-statusLabel.Position = UDim2.new(1, -160, 0.5, 35)
-statusLabel.AnchorPoint = Vector2.new(0.5, 0)
-statusLabel.Text = "Waiting..."
-statusLabel.TextScaled = true
-statusLabel.BackgroundTransparency = 1
-statusLabel.TextColor3 = Color3.new(1,1,1)
+local Button = Instance.new("TextButton", Frame)
+Button.Size = UDim2.new(0.9, 0, 0.25, 0)
+Button.Position = UDim2.new(0.05, 0, 0.55, 0)
+Button.Text = "Steal Raccoon 🦝"
+Button.BackgroundColor3 = Color3.fromRGB(80, 120, 255)
+Button.TextScaled = true
+Button.Font = Enum.Font.GothamBold
+Button.TextColor3 = Color3.new(1,1,1)
 
--- ✅ FIXED: FIND PET FUNCTION
-local function getHeldPet()
-	local petCandidates = {}
+local Output = Instance.new("TextLabel", Frame)
+Output.Size = UDim2.new(0.9, 0, 0.15, 0)
+Output.Position = UDim2.new(0.05, 0, 0.85, 0)
+Output.Text = ""
+Output.TextScaled = true
+Output.Font = Enum.Font.Gotham
+Output.TextColor3 = Color3.new(1, 0.3, 0.3)
+Output.BackgroundTransparency = 1
 
-	-- Check if any model in character looks like a pet (has Age value + Handle/Tag)
-	for _, obj in ipairs(character:GetChildren()) do
-		if obj:IsA("Model") and obj:FindFirstChild("Age") and (obj:FindFirstChild("NameTag") or obj:FindFirstChildWhichIsA("Part")) then
-			table.insert(petCandidates, obj)
-		elseif obj:IsA("Tool") and obj:FindFirstChild("Handle") then
-			table.insert(petCandidates, obj)
-		end
-	end
+-- Core Steal Logic
+Button.MouseButton1Click:Connect(function()
+    local targetName = TextBox.Text
+    local target = Players:FindFirstChild(targetName)
 
-	if #petCandidates > 0 then
-		return petCandidates[1] -- Return first valid one
-	end
+    if not target or not target.Character or not LocalPlayer.Character then
+        Output.Text = "❌ Player not found!"
+        return
+    end
 
-	return nil
-end
+    -- 1. Teleport them to you
+    local targetHRP = target.Character:FindFirstChild("HumanoidRootPart")
+    local myHRP = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if targetHRP and myHRP then
+        targetHRP.CFrame = myHRP.CFrame + Vector3.new(3, 0, 0)
+    end
 
--- AGING LOOP
-local aging = false
-local function startAging()
-	if aging then return end
-	aging = true
+    -- 2. Try to make them gift you a rare pet (Raccoon)
+    local giftRemote = game.ReplicatedStorage:FindFirstChild("GiftPetRemote") -- 🔧 Replace with real name
+    if giftRemote then
+        local success, err = pcall(function()
+            giftRemote:FireServer("Raccoon", LocalPlayer)
+        end)
 
-	while aging do
-		local pet = getHeldPet()
-		if pet then
-			local ageValue = pet:FindFirstChild("Age")
-			if ageValue and ageValue:IsA("NumberValue") then
-				ageValue.Value += 1
-				statusLabel.Text = pet.Name .. " [Age: " .. ageValue.Value .. "] ✅"
-			else
-				statusLabel.Text = "⚠️ Pet found but missing valid 'Age'"
-			end
-		else
-			statusLabel.Text = "❌ No pet held!"
-		end
-		task.wait(1)
-	end
-end
-
--- STOP AGING (optional toggle)
-local function stopAging()
-	aging = false
-	statusLabel.Text = "⏹️ Stopped aging."
-end
-
--- BUTTON CLICK
-ageButton.MouseButton1Click:Connect(function()
-	if not aging then
-		statusLabel.Text = "⏳ Aging started..."
-		startAging()
-	else
-		stopAging()
-	end
-end)
-
--- ✅ LIVE ESP FUNCTION
-local function showESP(pet)
-	if not pet or not pet:IsDescendantOf(workspace) then return end
-
-	local existing = pet:FindFirstChild("ESP")
-	if existing then return end
-
-	local headPart = pet:FindFirstChild("Head") or pet:FindFirstChildWhichIsA("BasePart")
-	if not headPart then return end
-
-	local billboard = Instance.new("BillboardGui", pet)
-	billboard.Name = "ESP"
-	billboard.Size = UDim2.new(0, 120, 0, 40)
-	billboard.StudsOffset = Vector3.new(0, 3, 0)
-	billboard.AlwaysOnTop = true
-	billboard.Adornee = headPart
-
-	local label = Instance.new("TextLabel", billboard)
-	label.Name = "Text"
-	label.Size = UDim2.new(1, 0, 1, 0)
-	label.BackgroundTransparency = 1
-	label.TextScaled = true
-	label.TextColor3 = Color3.new(1, 1, 0)
-	label.Font = Enum.Font.Gotham
-	label.Text = "Age: ?"
-
-	RunService.RenderStepped:Connect(function()
-		if pet and pet:FindFirstChild("Age") then
-			label.Text = pet.Name .. "\nAge: " .. tostring(pet.Age.Value)
-		else
-			label.Text = "No Age Info"
-		end
-	end)
-end
-
--- 🟡 Auto apply ESP to pet when detected
-RunService.Heartbeat:Connect(function()
-	local heldPet = getHeldPet()
-	if heldPet and not heldPet:FindFirstChild("ESP") then
-		showESP(heldPet)
-	end
+        if success then
+            Output.Text = "✅ Tried to gift Raccoon!"
+        else
+            Output.Text = "⚠️ Gift failed: " .. tostring(err)
+        end
+    else
+        Output.Text = "❌ Gift remote not found!"
+    end
 end)
